@@ -25,8 +25,13 @@ flowchart LR
 3. **Import Database:**
    - Connect using any DB tool (TablePlus, DBeaver, or command line) using the Railway Public URL:
      ```bash
-     mysql -h <MYSQLHOST> -u <MYSQLUSER> -p<MYSQLPASSWORD> -P <MYSQLPORT> <MYSQLDATABASE> < gym/migrations/backups/gymdb_pre_priority1_backup.sql
+     # Single-command full v2.0 import (recommended for fresh databases):
+     mysql -h <MYSQLHOST> -u <MYSQLUSER> -p<MYSQLPASSWORD> -P <MYSQLPORT> <MYSQLDATABASE> < gym/migrations/00_full_fitforge_v2_schema_and_seed.sql
+
+     # OR run the incremental sequence if upgrading an existing pre-v1 database:
      mysql -h <MYSQLHOST> -u <MYSQLUSER> -p<MYSQLPASSWORD> -P <MYSQLPORT> <MYSQLDATABASE> < gym/migrations/01_priority1_schema_enhancements.sql
+     mysql -h <MYSQLHOST> -u <MYSQLUSER> -p<MYSQLPASSWORD> -P <MYSQLPORT> <MYSQLDATABASE> < gym/migrations/02_priority2_schema_enhancements.sql
+     mysql -h <MYSQLHOST> -u <MYSQLUSER> -p<MYSQLPASSWORD> -P <MYSQLPORT> <MYSQLDATABASE> < gym/migrations/03_member_profile_metrics.sql
      ```
 4. **Deploy Web Container:**
    - Click **New Service** > **GitHub Repo** > Select this repository.
@@ -45,7 +50,10 @@ flowchart LR
    - Sign up at [aiven.io](https://aiven.io).
    - Create a free MySQL service (5GB storage, automatic daily backups, SSL).
    - Copy the Service URI (`mysql://avnadmin:password@host:port/defaultdb?ssl-mode=REQUIRED`).
-   - Import the schema and seed files into Aiven.
+   - Import the schema and seed file into Aiven:
+     ```bash
+     mysql -h <AIVEN_HOST> -u <AIVEN_USER> -p<AIVEN_PASSWORD> -P <AIVEN_PORT> --ssl-mode=REQUIRED <AIVEN_DB> < gym/migrations/00_full_fitforge_v2_schema_and_seed.sql
+     ```
 2. **Web Container on Render:**
    - Sign up at [render.com](https://render.com).
    - Click **New** > **Web Service** > Connect GitHub Repository.
