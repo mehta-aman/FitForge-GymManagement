@@ -41,6 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $packageType = intval($_POST['PackageType'] ?? 0);
         $duration = trim($_POST['PackageDuratiobn'] ?? '1 Month');
         $price = floatval($_POST['Price'] ?? 0);
+        $regFee = floatval($_POST['registration_fee'] ?? 0);
+        $discount = floatval($_POST['discount'] ?? 0);
+        $displayOrder = intval($_POST['display_order'] ?? 0);
+        $benefits = trim($_POST['benefits'] ?? '');
         $description = trim($_POST['Description'] ?? '');
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         $photoPath = $plan['uploadphoto'];
@@ -60,13 +64,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (empty($err)) {
                 if ($isEdit) {
-                    $updateStmt = $dbh->prepare("UPDATE tbladdpackage SET titlename = ?, category = ?, PackageType = ?, PackageDuratiobn = ?, Price = ?, Description = ?, uploadphoto = ?, is_active = ? WHERE id = ?");
-                    $updateStmt->execute([$title, $category, $packageType, $duration, $price, $description, $photoPath, $isActive, $id]);
+                    $updateStmt = $dbh->prepare("UPDATE tbladdpackage SET titlename = ?, category = ?, PackageType = ?, PackageDuratiobn = ?, Price = ?, registration_fee = ?, discount = ?, display_order = ?, benefits = ?, Description = ?, uploadphoto = ?, is_active = ? WHERE id = ?");
+                    $updateStmt->execute([$title, $category, $packageType, $duration, $price, $regFee, $discount, $displayOrder, $benefits, $description, $photoPath, $isActive, $id]);
                     header("location:plans.php?msg=" . urlencode("Plan updated successfully!"));
                     exit();
                 } else {
-                    $insStmt = $dbh->prepare("INSERT INTO tbladdpackage (titlename, category, PackageType, PackageDuratiobn, Price, Description, uploadphoto, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $insStmt->execute([$title, $category, $packageType, $duration, $price, $description, $photoPath, $isActive]);
+                    $insStmt = $dbh->prepare("INSERT INTO tbladdpackage (titlename, category, PackageType, PackageDuratiobn, Price, registration_fee, discount, display_order, benefits, Description, uploadphoto, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $insStmt->execute([$title, $category, $packageType, $duration, $price, $regFee, $discount, $displayOrder, $benefits, $description, $photoPath, $isActive]);
                     header("location:plans.php?msg=" . urlencode("New membership plan created successfully!"));
                     exit();
                 }
@@ -166,15 +170,37 @@ $packageTypes = $dbh->query("SELECT id, PackageName, cate_id FROM tblpackage ORD
               </div>
 
               <div class="col-md-6 form-group">
-                <label style="font-weight: 600; font-size: 13.5px;">Price (<?php echo get_currency_symbol(); ?>) *</label>
+                <label style="font-weight: 600; font-size: 13.5px;">Regular Price (<?php echo get_currency_symbol(); ?>) *</label>
                 <input type="number" step="0.01" name="Price" class="form-control" required placeholder="0.00" value="<?php echo htmlspecialchars($plan['Price']); ?>">
               </div>
             </div>
 
+            <div class="row">
+              <div class="col-md-4 form-group">
+                <label style="font-weight: 600; font-size: 13.5px;">Registration Fee (<?php echo get_currency_symbol(); ?>)</label>
+                <input type="number" step="0.01" name="registration_fee" class="form-control" placeholder="0.00" value="<?php echo htmlspecialchars($plan['registration_fee'] ?? '0.00'); ?>">
+              </div>
+
+              <div class="col-md-4 form-group">
+                <label style="font-weight: 600; font-size: 13.5px;">Discount (<?php echo get_currency_symbol(); ?>)</label>
+                <input type="number" step="0.01" name="discount" class="form-control" placeholder="0.00" value="<?php echo htmlspecialchars($plan['discount'] ?? '0.00'); ?>">
+              </div>
+
+              <div class="col-md-4 form-group">
+                <label style="font-weight: 600; font-size: 13.5px;">Display Sorting Order</label>
+                <input type="number" name="display_order" class="form-control" value="<?php echo intval($plan['display_order'] ?? 0); ?>">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label style="font-weight: 600; font-size: 13.5px;">Key Perks &amp; Inclusions (One perk per line)</label>
+              <textarea name="benefits" class="form-control" rows="3" placeholder="Full Cardio &amp; Weight Floor Access&#10;Locker &amp; Shower Access&#10;1 Free Personal Training Session&#10;Sauna &amp; Steam Recovery"><?php echo htmlspecialchars($plan['benefits'] ?? ''); ?></textarea>
+              <small class="form-text text-muted">Each line will be rendered as an individual checkmarked perk badge on the public plan cards.</small>
+            </div>
+
             <div class="form-group" style="margin-bottom: 0;">
-              <label style="font-weight: 600; font-size: 13.5px;">Description & Features Included</label>
-              <textarea name="Description" class="form-control" rows="6" placeholder="Describe the inclusions (e.g. Unlimited gym floor access, locker room, sauna, free fitness evaluation...)"><?php echo htmlspecialchars($plan['Description'] ?? ''); ?></textarea>
-              <small class="form-text text-muted">Use clear bullet lines for the best presentation on the website.</small>
+              <label style="font-weight: 600; font-size: 13.5px;">Detailed Description</label>
+              <textarea name="Description" class="form-control" rows="4" placeholder="Describe additional highlights and terms..."><?php echo htmlspecialchars($plan['Description'] ?? ''); ?></textarea>
             </div>
           </div>
         </div>

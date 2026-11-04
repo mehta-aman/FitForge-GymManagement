@@ -21,10 +21,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'toggle' && isset($_GET['id'])
 // Delete Plan
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $planId = intval($_GET['id']);
-    // Check if memberships exist for this plan
+    // Check if memberships or bookings exist for this plan
     $hasSubs = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE plan_id = $planId")->fetchColumn();
-    if ($hasSubs > 0) {
-        $err = "Cannot delete this plan because active member subscriptions are linked to it. You can deactivate it instead.";
+    $hasBookings = $dbh->query("SELECT count(*) FROM tblbooking WHERE package_id = '$planId'")->fetchColumn();
+    if ($hasSubs > 0 || $hasBookings > 0) {
+        $err = "Cannot delete this plan because active member subscriptions or historical bookings reference it. To preserve member history, deactivate the plan instead.";
     } else {
         $stmt = $dbh->prepare("DELETE FROM tbladdpackage WHERE id = ?");
         $stmt->execute([$planId]);
