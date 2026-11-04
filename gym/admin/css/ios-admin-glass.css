@@ -1,0 +1,486 @@
+@import url('../../css/ios-glass.css');
+
+/* Admin Layout Overrides */
+body.app, .app {
+  background-color: var(--bg-deep) !important;
+  color: var(--text-white) !important;
+  font-family: var(--font-family) !important;
+  min-height: 100vh;
+}
+
+/* Admin Top Bar */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1030;
+  height: 64px;
+  background: rgba(15, 23, 42, 0.72) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.app-header__logo {
+  font-family: var(--font-family) !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  color: #fff !important;
+  text-decoration: none !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none !important;
+}
+
+.app-header__logo::before {
+  content: '⚡';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+  border-radius: 10px;
+  font-size: 16px;
+  box-shadow: 0 4px 12px var(--color-primary-glow);
+}
+
+.app-sidebar__toggle {
+  color: var(--text-secondary) !important;
+  font-size: 20px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  background: none !important;
+  text-decoration: none !important;
+}
+
+.app-sidebar__toggle:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.app-nav__item {
+  color: var(--text-secondary) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px !important;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.25s var(--ios-spring);
+  text-decoration: none !important;
+}
+
+.app-nav__item:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.dropdown-menu {
+  background: rgba(15, 23, 42, 0.88) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+  padding: 8px !important;
+  margin-top: 8px !important;
+}
+
+.dropdown-item {
+  color: var(--text-secondary) !important;
+  font-size: 14px !important;
+  font-weight: 500;
+  border-radius: 12px;
+  padding: 10px 16px !important;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  transform: translateX(3px);
+}
+
+/* Sidebar Dock */
+.app-sidebar {
+  position: fixed;
+  top: 64px;
+  bottom: 0;
+  left: 0;
+  width: 250px;
+  padding-top: 20px;
+  background: rgba(10, 15, 29, 0.8) !important;
+  backdrop-filter: blur(32px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(190%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4) !important;
+  overflow-y: auto;
+  z-index: 1020;
+}
+
+.app-menu {
+  padding: 0 12px;
+  margin: 0;
+}
+
+.app-menu__item {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  border-radius: 16px !important;
+  border-left: none !important;
+  margin-bottom: 6px;
+  text-decoration: none !important;
+  transition: all 0.25s var(--ios-spring) !important;
+}
+
+.app-menu__item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+  transform: translateX(4px);
+}
+
+.app-menu__item.active, .app-menu__item:focus {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 16px rgba(56, 189, 248, 0.15);
+}
+
+.treeview-menu {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: 14px;
+  padding: 6px !important;
+  margin: 4px 0 10px 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.treeview-item {
+  color: var(--text-muted) !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  padding: 8px 14px !important;
+  border-radius: 10px;
+  display: block;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+}
+
+.treeview-item:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Main Content Area */
+.app-content {
+  margin-left: 250px;
+  margin-top: 64px;
+  padding: 32px 36px !important;
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+
+.app-title {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 20px !important;
+  padding: 20px 28px !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4) !important;
+  margin-bottom: 30px !important;
+}
+
+.app-title h1 {
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.app-title p {
+  color: var(--text-secondary) !important;
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+.app-breadcrumb {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.breadcrumb-item a {
+  color: var(--color-primary) !important;
+  font-weight: 600;
+}
+
+/* iOS Control Center Widget Cards */
+.widget-small {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+  padding: 22px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+  transition: all 0.35s var(--ios-spring) !important;
+  margin-bottom: 24px !important;
+  text-decoration: none !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.widget-small:hover {
+  transform: translateY(-6px) scale(1.02) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.65) !important;
+}
+
+.widget-small .icon {
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 26px !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+}
+
+.widget-small.primary .icon {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #38bdf8 !important;
+}
+
+.widget-small.info .icon {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(99, 102, 241, 0.25) 100%) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  color: #a78bfa !important;
+}
+
+.widget-small.warning .icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.25) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: #fbbf24 !important;
+}
+
+.widget-small.danger .icon {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.25) 100%) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #f87171 !important;
+}
+
+.widget-small .info {
+  flex-grow: 1;
+}
+
+.widget-small .info h4 {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--text-secondary) !important;
+  margin: 0 0 6px !important;
+}
+
+.widget-small .info p {
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  color: #fff !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+
+/* Glass Panels & Tiles */
+.tile {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+  padding: 30px !important;
+  margin-bottom: 30px !important;
+  color: #fff !important;
+}
+
+.tile-title {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+  color: #fff !important;
+  margin-bottom: 22px !important;
+}
+
+/* Glass Forms & Inputs */
+.form-control {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 14px !important;
+  color: #fff !important;
+  padding: 12px 16px !important;
+  font-size: 14px !important;
+  transition: all 0.25s var(--ios-spring) !important;
+}
+
+.form-control:focus {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-glow) !important;
+  color: #fff !important;
+}
+
+.control-label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  margin-bottom: 8px !important;
+}
+
+/* Tables inside Tiles */
+.table {
+  color: #fff !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin-top: 15px !important;
+}
+
+.table th {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 14px 18px !important;
+}
+
+.table td {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  padding: 14px 18px !important;
+  font-size: 14px !important;
+  vertical-align: middle !important;
+}
+
+.table tr:hover td {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dataTables_wrapper {
+  color: var(--text-secondary) !important;
+}
+
+.dataTables_filter input {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 12px !important;
+  color: #fff !important;
+  padding: 6px 12px !important;
+  margin-left: 8px !important;
+  outline: none !important;
+}
+
+.dataTables_length select {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  padding: 4px 8px !important;
+}
+
+.page-item .page-link {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  margin: 0 3px !important;
+}
+
+.page-item.active .page-link {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--btn-primary-bg, #38bdf8) !important;
+  background-image: linear-gradient(135deg, var(--btn-primary-bg, #38bdf8) 0%, var(--color-accent, #2563eb) 100%) !important;
+  color: var(--btn-primary-text, #fff) !important;
+  border: none !important;
+  border-radius: 14px !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+  box-shadow: 0 8px 16px var(--color-primary-glow) !important;
+  transition: all 0.25s var(--ios-spring) !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 12px 24px var(--color-primary-glow) !important;
+  color: var(--btn-primary-text, #fff) !important;
+}
+
+.btn-primary:active {
+  transform: scale(0.97) !important;
+}
+
+/* Secondary Buttons */
+.btn-secondary,
+.btn-outline-light {
+  background: var(--btn-secondary-bg, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--btn-secondary-text, #fff) !important;
+  border: 1px solid var(--btn-secondary-border, rgba(255, 255, 255, 0.16)) !important;
+  border-radius: 14px !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+  transition: all 0.25s var(--ios-spring) !important;
+}
+
+.btn-secondary:hover,
+.btn-outline-light:hover {
+  background: var(--btn-secondary-border, rgba(255, 255, 255, 0.2)) !important;
+  color: var(--btn-secondary-text, #fff) !important;
+  border-color: var(--btn-secondary-border, rgba(255, 255, 255, 0.2)) !important;
+  transform: translateY(-2px) !important;
+}
+
+.btn-secondary:active,
+.btn-outline-light:active {
+  transform: scale(0.97) !important;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+  border: none !important;
+  border-radius: 14px !important;
+}
