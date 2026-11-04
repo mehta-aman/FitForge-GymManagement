@@ -1,0 +1,546 @@
+-- MySQL dump 10.13  Distrib 5.7.24, for osx11.1 (x86_64)
+--
+-- Host: localhost    Database: gymdb
+-- ------------------------------------------------------
+-- Server version	9.3.0
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `tbl_attendance`
+--
+
+DROP TABLE IF EXISTS `tbl_attendance`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_attendance` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `check_in_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `check_out_time` timestamp NULL DEFAULT NULL,
+  `check_in_method` enum('qr_scan','manual','kiosk') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'manual',
+  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_att_user` (`user_id`),
+  KEY `idx_att_checkin` (`check_in_time`),
+  KEY `idx_att_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_attendance`
+--
+
+LOCK TABLES `tbl_attendance` WRITE;
+/*!40000 ALTER TABLE `tbl_attendance` DISABLE KEYS */;
+INSERT INTO `tbl_attendance` VALUES (1,1,'2026-11-04 11:57:56','2026-11-04 12:23:03','manual',NULL,1),(2,7,'2026-11-04 12:23:30','2026-11-04 16:23:16','manual',NULL,1),(3,2,'2026-11-04 12:23:49','2026-11-04 16:23:14','manual',NULL,1),(4,1,'2026-11-04 12:23:57','2026-11-04 16:23:12','manual',NULL,1),(5,4,'2026-11-04 12:24:08','2026-11-04 16:23:10','manual',NULL,1);
+/*!40000 ALTER TABLE `tbl_attendance` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_login_attempts`
+--
+
+DROP TABLE IF EXISTS `tbl_login_attempts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_login_attempts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `ip_address` varchar(45) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `attempt_time` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_ip_email_time` (`ip_address`,`email`,`attempt_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_login_attempts`
+--
+
+LOCK TABLES `tbl_login_attempts` WRITE;
+/*!40000 ALTER TABLE `tbl_login_attempts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tbl_login_attempts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_member_trainers`
+--
+
+DROP TABLE IF EXISTS `tbl_member_trainers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_member_trainers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `trainer_id` int NOT NULL,
+  `assigned_date` date NOT NULL,
+  `status` enum('active','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
+  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_mt_user` (`user_id`),
+  KEY `idx_mt_trainer` (`trainer_id`),
+  KEY `idx_mt_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_member_trainers`
+--
+
+LOCK TABLES `tbl_member_trainers` WRITE;
+/*!40000 ALTER TABLE `tbl_member_trainers` DISABLE KEYS */;
+INSERT INTO `tbl_member_trainers` VALUES (1,1,1,'2026-11-01','active','Focusing on strength progression and barbell squats',1);
+/*!40000 ALTER TABLE `tbl_member_trainers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_memberships`
+--
+
+DROP TABLE IF EXISTS `tbl_memberships`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_memberships` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `plan_id` int NOT NULL,
+  `booking_id` int DEFAULT NULL,
+  `start_date` date NOT NULL,
+  `expiry_date` date NOT NULL,
+  `status` enum('active','expired','pending','cancelled','frozen') NOT NULL DEFAULT 'active',
+  `payment_status` enum('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `paid_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `payment_method` varchar(50) DEFAULT 'Cash',
+  `transaction_ref` varchar(100) DEFAULT NULL,
+  `admin_notes` text,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `gym_id` int NOT NULL DEFAULT '1',
+  `freeze_start_date` date DEFAULT NULL,
+  `freeze_end_date` date DEFAULT NULL,
+  `freeze_reason` varchar(255) DEFAULT NULL,
+  `cancelled_at` timestamp NULL DEFAULT NULL,
+  `cancel_reason` varchar(255) DEFAULT NULL,
+  `renewed_from_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `plan_id` (`plan_id`),
+  KEY `booking_id` (`booking_id`),
+  KEY `idx_membership_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_memberships`
+--
+
+LOCK TABLES `tbl_memberships` WRITE;
+/*!40000 ALTER TABLE `tbl_memberships` DISABLE KEYS */;
+INSERT INTO `tbl_memberships` VALUES (1,1,2,1,'2022-03-05','2022-09-05','expired','paid',800.00,5000.00,'Cash',NULL,NULL,'2022-03-05 03:53:21',1,NULL,NULL,NULL,NULL,NULL,NULL),(2,1,1,2,'2022-03-05','2022-06-05','expired','paid',600.00,600.00,'Cash',NULL,NULL,'2022-03-05 03:53:28',1,NULL,NULL,NULL,NULL,NULL,NULL),(3,5,2,3,'2022-03-08','2022-09-08','expired','paid',800.00,800.00,'Cash',NULL,NULL,'2022-03-08 17:44:18',1,NULL,NULL,NULL,NULL,NULL,NULL),(4,5,1,6,'2022-05-22','2022-08-22','expired','unpaid',600.00,0.00,'Cash',NULL,NULL,'2022-05-22 02:16:14',1,NULL,NULL,NULL,NULL,NULL,NULL),(5,6,2,7,'2022-05-22','2022-11-22','expired','paid',800.00,2000.00,'Cash',NULL,NULL,'2022-05-22 02:32:45',1,NULL,NULL,NULL,NULL,NULL,NULL),(6,7,1,8,'2026-11-04','2027-02-04','pending','unpaid',2500.00,0.00,'Cash',NULL,NULL,'2026-11-04 10:07:16',1,NULL,NULL,NULL,NULL,NULL,NULL),(7,7,1,9,'2026-11-04','2027-02-05','active','paid',2500.00,2500.00,'Cash','','\n[Frozen on 2026-11-04: Personal Travel / Vacation]\n[Resumed on 2026-11-04. Extended by 1 days to 2027-02-05]','2026-11-04 10:07:55',1,NULL,NULL,NULL,NULL,NULL,NULL);
+/*!40000 ALTER TABLE `tbl_memberships` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_settings`
+--
+
+DROP TABLE IF EXISTS `tbl_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_settings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `setting_group` varchar(50) NOT NULL DEFAULT 'general',
+  `setting_key` varchar(100) NOT NULL,
+  `setting_value` text,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `setting_key` (`setting_key`)
+) ENGINE=InnoDB AUTO_INCREMENT=140 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_settings`
+--
+
+LOCK TABLES `tbl_settings` WRITE;
+/*!40000 ALTER TABLE `tbl_settings` DISABLE KEYS */;
+INSERT INTO `tbl_settings` VALUES (1,'general','gym_name','Golden Eagle','2026-11-04 06:35:53'),(2,'general','gym_tagline','FITNESS CLUB','2026-11-04 05:51:53'),(3,'general','website_title','Golden Eagle FITNESS CLUB — Elevate Your Fitness','2026-11-04 06:35:53'),(4,'general','seo_description','Next generation fitness club offering personalized training, premium recovery, and flexible membership passes.','2026-11-04 05:51:53'),(5,'branding','gym_logo','img/branding/37071fc5403ce9978504c7bc1a88a1f5.png','2026-11-04 06:48:03'),(6,'branding','gym_favicon','img/branding/af78ed7a29bc3900dca0c55e7d0c8bbc.png','2026-11-04 06:48:19'),(7,'general','currency_symbol','₹','2026-11-04 06:46:01'),(8,'general','currency_code','INR','2026-11-04 06:46:01'),(9,'localization','timezone','Asia/Kolkata','2026-11-04 05:51:53'),(10,'localization','date_format','d M Y','2026-11-04 05:51:53'),(11,'contact','contact_email','contact@gymclub.com','2026-11-04 05:51:53'),(12,'contact','contact_phone','+91 9983665673','2026-11-04 06:35:53'),(13,'contact','contact_whatsapp','+91 9983665673','2026-11-04 06:35:53'),(14,'contact','contact_address','Radha Krishkna Mandir, Nimbaheda Road, Mangalwad Chouraha','2026-11-04 06:35:53'),(15,'contact','map_link','https://maps.google.com','2026-11-04 05:51:53'),(16,'social','social_facebook','https://facebook.com','2026-11-04 05:51:53'),(17,'social','social_instagram','https://instagram.com','2026-11-04 05:51:53'),(18,'social','social_twitter','https://twitter.com','2026-11-04 05:51:53'),(19,'social','social_youtube','https://youtube.com','2026-11-04 05:51:53'),(20,'hero','hero_pill','NEXT GENERATION FITNESS','2026-11-04 05:51:53'),(21,'hero','hero_title','Sculpt Your Body. Elevate Your Mind.','2026-11-04 05:51:53'),(22,'hero','hero_subtitle','Experience bespoke coaching, elite recovery zones, and flexible membership passes with iOS-grade precision.','2026-11-04 05:51:53'),(23,'hero','hero_cta_text','Explore Memberships','2026-11-04 05:51:53'),(24,'hero','hero_cta_link','#plans','2026-11-04 05:51:53'),(25,'about','about_pill','OUR MISSION','2026-11-04 05:51:53'),(26,'about','about_title','Empowering Lifelong Fitness','2026-11-04 05:51:53'),(27,'about','about_text','Welcome to GYM MS! We are a collective of fitness enthusiasts, certified coaches, and nutritionists dedicated to redefining your health journey.','2026-11-04 05:51:53'),(28,'footer','footer_copy','GYM Management System. Crafted with iOS-inspired Glassmorphism & High-Performance Motion.','2026-11-04 05:51:53'),(29,'theme','theme_primary','#00e04f','2026-11-04 07:01:43'),(30,'theme','theme_accent','#04b7d7','2026-11-04 07:01:43'),(31,'theme','theme_mode','dark','2026-11-04 06:40:17'),(32,'theme','theme_preset','custom','2026-11-04 07:01:43'),(61,'membership','renewal_reminder_days','3','2026-11-04 06:46:01'),(108,'theme','btn_primary_bg','#00c244','2026-11-04 07:01:43'),(109,'theme','btn_primary_text','#ffffff','2026-11-04 06:59:34'),(110,'theme','btn_secondary_bg','#064e3b','2026-11-04 07:00:42'),(111,'theme','btn_secondary_text','#ecfdf5','2026-11-04 07:00:42'),(112,'theme','btn_secondary_border','#047857','2026-11-04 07:00:42');
+/*!40000 ALTER TABLE `tbl_settings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_trainers`
+--
+
+DROP TABLE IF EXISTS `tbl_trainers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_trainers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `speciality` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'General Fitness & Strength',
+  `mobile` varchar(25) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `experience_years` int NOT NULL DEFAULT '2',
+  `photo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bio` text COLLATE utf8mb4_unicode_ci,
+  `status` enum('active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
+  `gym_id` int NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_trainer_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_trainers`
+--
+
+LOCK TABLES `tbl_trainers` WRITE;
+/*!40000 ALTER TABLE `tbl_trainers` DISABLE KEYS */;
+INSERT INTO `tbl_trainers` VALUES (1,'Vikram Sharma','Strength & Hypertrophy Coach','9876543210','vikram@fitforge.local',6,NULL,'Specializes in powerlifting and competitive bodybuilding conditioning.','active',1,'2026-11-04 10:47:37'),(2,'Priya Patel','HIIT, Cardio & Mobility Specialist','9876543211','priya@fitforge.local',4,NULL,'Functional training and high-intensity interval conditioning expert.','active',1,'2026-11-04 10:47:37'),(3,'Rohit Verma','Weight Management & Nutritionist','9876543212','rohit@fitforge.local',5,NULL,'Certified clinical sports nutritionist and fat-loss conditioning trainer.','active',1,'2026-11-04 10:47:37');
+/*!40000 ALTER TABLE `tbl_trainers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_website_features`
+--
+
+DROP TABLE IF EXISTS `tbl_website_features`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_website_features` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(100) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `icon` varchar(50) DEFAULT 'fa-bolt',
+  `display_order` int DEFAULT '0',
+  `is_active` tinyint(1) DEFAULT '1',
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_features_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_website_features`
+--
+
+LOCK TABLES `tbl_website_features` WRITE;
+/*!40000 ALTER TABLE `tbl_website_features` DISABLE KEYS */;
+INSERT INTO `tbl_website_features` VALUES (1,'Elite Coaching','Certified fitness mentors guiding every workout and form.','fa-heartbeat',1,1,1),(2,'Modern Gear','Top-of-the-line biomechanic strength equipment & recovery tools.','fa-trophy',2,1,1),(3,'Vibrant Community','An inclusive network of motivated members keeping you accountable.','fa-users',3,1,1),(4,'Steam & Recovery','Thermal recovery suites and therapeutic stretch stations.','fa-fire',4,1,1);
+/*!40000 ALTER TABLE `tbl_website_features` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_workout_plans`
+--
+
+DROP TABLE IF EXISTS `tbl_workout_plans`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_workout_plans` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `target_muscle` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `exercise_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sets` int NOT NULL DEFAULT '3',
+  `reps` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '10-12',
+  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `gym_id` int NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_wp_user` (`user_id`),
+  KEY `idx_wp_day` (`day_of_week`),
+  KEY `idx_wp_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_workout_plans`
+--
+
+LOCK TABLES `tbl_workout_plans` WRITE;
+/*!40000 ALTER TABLE `tbl_workout_plans` DISABLE KEYS */;
+INSERT INTO `tbl_workout_plans` VALUES (1,1,'Monday','Chest & Triceps','Barbell Bench Press',4,'8-10 reps','Control descent, progressive overload',1,'2026-11-04 10:47:37'),(2,1,'Monday','Chest & Triceps','Incline Dumbbell Press',3,'10-12 reps','Full stretch at bottom',1,'2026-11-04 10:47:37'),(3,1,'Monday','Chest & Triceps','Cable Tricep Pushdowns',3,'12-15 reps','Squeeze at extension',1,'2026-11-04 10:47:37'),(4,1,'Wednesday','Back & Biceps','Lat Pulldowns',4,'10-12 reps','Drive elbows downwards',1,'2026-11-04 10:47:37'),(5,1,'Wednesday','Back & Biceps','Seated Cable Rows',3,'10-12 reps','Retract scapula',1,'2026-11-04 10:47:37'),(6,1,'Friday','Legs & Core','Barbell Back Squats',4,'8-10 reps','Deep hip hinge below parallel',1,'2026-11-04 10:47:37'),(7,1,'Friday','Legs & Core','Hanging Leg Raises',3,'15 reps','Strict form, no swinging',1,'2026-11-04 10:47:37');
+/*!40000 ALTER TABLE `tbl_workout_plans` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbladdpackage`
+--
+
+DROP TABLE IF EXISTS `tbladdpackage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbladdpackage` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `category` varchar(45) DEFAULT NULL,
+  `titlename` varchar(450) DEFAULT NULL,
+  `PackageType` varchar(45) DEFAULT NULL,
+  `PackageDuratiobn` varchar(45) DEFAULT NULL,
+  `Price` varchar(45) DEFAULT NULL,
+  `uploadphoto` varchar(450) DEFAULT NULL,
+  `Description` varchar(450) DEFAULT NULL,
+  `create_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `gym_id` int NOT NULL DEFAULT '1',
+  `registration_fee` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `discount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `display_order` int NOT NULL DEFAULT '0',
+  `benefits` text,
+  PRIMARY KEY (`id`),
+  KEY `idx_pkg_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbladdpackage`
+--
+
+LOCK TABLES `tbladdpackage` WRITE;
+/*!40000 ALTER TABLE `tbladdpackage` DISABLE KEYS */;
+INSERT INTO `tbladdpackage` VALUES (1,'1','3 Months Membership Package','1','3 Month','2500','img/uploads/plans/1b1253ff20f41ebda6d7376e37ac4196.png','Free Fitness Gear\r\nComplimentary OnePass','2022-03-05 02:55:34',1,1,0.00,0.00,0,NULL),(2,'1','6 Months Membership Package','1','6 Month','5000','img/uploads/plans/96bb67620efa7238fafdb7e138740893.png','Book Six Days Different Trainers Class designed for fast Weight Loss / Weight Gain with combination of Latest Workouts in addition to complimentary access to gym area with personal training.','2022-03-05 02:56:44',1,1,0.00,0.00,0,NULL),(3,'1','12 Months Membership Package','1','12 Month','10000','img/uploads/plans/90429b03f581ee68e865ffa07ac2ace7.png','hfdgfhfgh<div><br></div><div>fdgdfg</div>','2022-05-22 02:34:08',1,1,0.00,0.00,0,NULL);
+/*!40000 ALTER TABLE `tbladdpackage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbladmin`
+--
+
+DROP TABLE IF EXISTS `tbladmin`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbladmin` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(45) DEFAULT NULL,
+  `email` varchar(45) DEFAULT NULL,
+  `mobile` varchar(45) DEFAULT NULL,
+  `password` varchar(100) DEFAULT NULL,
+  `create_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbladmin`
+--
+
+LOCK TABLES `tbladmin` WRITE;
+/*!40000 ALTER TABLE `tbladmin` DISABLE KEYS */;
+INSERT INTO `tbladmin` VALUES (1,'admin','admin@gmail.com','99197896857','$2y$12$ZC1dMGu4XTVpxpA35lMuT.IQCuPvo773q/CW8ndRLC0dAO69Upy4u','2022-01-19 11:25:17',1);
+/*!40000 ALTER TABLE `tbladmin` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tblbooking`
+--
+
+DROP TABLE IF EXISTS `tblbooking`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tblbooking` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `package_id` varchar(45) DEFAULT NULL,
+  `userid` varchar(45) DEFAULT NULL,
+  `booking_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `payment` varchar(45) DEFAULT NULL,
+  `paymentType` varchar(45) DEFAULT NULL,
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_booking_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tblbooking`
+--
+
+LOCK TABLES `tblbooking` WRITE;
+/*!40000 ALTER TABLE `tblbooking` DISABLE KEYS */;
+INSERT INTO `tblbooking` VALUES (1,'2','1','2022-03-05 03:53:21','800','Cash',1),(2,'1','1','2022-03-05 03:53:28','600','Partial Payment',1),(3,'2','5','2022-03-08 17:44:18','300','Full Payment',1),(6,'1','5','2022-05-22 02:16:14',NULL,NULL,1),(7,'2','6','2022-05-22 02:32:45',NULL,'Cash',1),(8,'1','7','2026-11-04 10:07:16',NULL,NULL,1),(9,'1','7','2026-11-04 10:07:55','2500','Cash',1);
+/*!40000 ALTER TABLE `tblbooking` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tblcategory`
+--
+
+DROP TABLE IF EXISTS `tblcategory`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tblcategory` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `category_name` varchar(45) DEFAULT NULL,
+  `status` varchar(45) DEFAULT '0',
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_cat_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tblcategory`
+--
+
+LOCK TABLES `tblcategory` WRITE;
+/*!40000 ALTER TABLE `tblcategory` DISABLE KEYS */;
+INSERT INTO `tblcategory` VALUES (1,'Category1','0',1),(2,'Category2','0',1);
+/*!40000 ALTER TABLE `tblcategory` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tblgyms`
+--
+
+DROP TABLE IF EXISTS `tblgyms`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tblgyms` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `gym_name` varchar(100) NOT NULL,
+  `slug` varchar(100) NOT NULL,
+  `tagline` varchar(150) DEFAULT NULL,
+  `logo` varchar(255) DEFAULT NULL,
+  `favicon` varchar(255) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `address` text,
+  `currency_code` varchar(10) DEFAULT 'INR',
+  `currency_symbol` varchar(10) DEFAULT '₹',
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tblgyms`
+--
+
+LOCK TABLES `tblgyms` WRITE;
+/*!40000 ALTER TABLE `tblgyms` DISABLE KEYS */;
+INSERT INTO `tblgyms` VALUES (1,'Golden Eagle','golden-eagle','FITNESS CLUB',NULL,NULL,NULL,NULL,NULL,'INR','₹','active','2026-11-04 09:49:02','2026-11-04 09:49:02');
+/*!40000 ALTER TABLE `tblgyms` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tblpackage`
+--
+
+DROP TABLE IF EXISTS `tblpackage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tblpackage` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `cate_id` varchar(45) DEFAULT NULL,
+  `PackageName` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tblpackage`
+--
+
+LOCK TABLES `tblpackage` WRITE;
+/*!40000 ALTER TABLE `tblpackage` DISABLE KEYS */;
+INSERT INTO `tblpackage` VALUES (1,'1','fdgdfg'),(3,'2','Package2');
+/*!40000 ALTER TABLE `tblpackage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tblpayment`
+--
+
+DROP TABLE IF EXISTS `tblpayment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tblpayment` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `bookingID` varchar(45) DEFAULT NULL,
+  `paymentType` varchar(45) DEFAULT NULL,
+  `payment` varchar(45) DEFAULT NULL,
+  `payment_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `gym_id` int NOT NULL DEFAULT '1',
+  `payment_method` varchar(50) DEFAULT 'Cash',
+  `transaction_ref` varchar(100) DEFAULT NULL,
+  `notes` text,
+  PRIMARY KEY (`id`),
+  KEY `idx_payment_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tblpayment`
+--
+
+LOCK TABLES `tblpayment` WRITE;
+/*!40000 ALTER TABLE `tblpayment` DISABLE KEYS */;
+INSERT INTO `tblpayment` VALUES (1,'1','Partial Payment','300','2022-03-05 03:54:10',1,'Cash',NULL,NULL),(4,'1','Full Payment','500','2022-05-22 01:01:58',1,'Cash',NULL,NULL),(5,'3','Partial Payment','300','2022-05-22 01:09:53',1,'Cash',NULL,NULL),(8,'3','Full Payment','500','2022-05-22 01:19:03',1,'Cash',NULL,NULL),(9,'7','Partial Payment','500','2022-05-22 02:40:34',1,'Cash',NULL,NULL),(10,'7','Full Payment','300','2022-05-22 02:41:14',1,'Cash',NULL,NULL),(11,'7','Cash','400','2026-11-04 10:06:02',1,'Cash',NULL,NULL),(12,'7','Cash','400','2026-11-04 10:06:14',1,'Cash',NULL,NULL),(13,'7','Cash','400','2026-11-04 10:06:20',1,'Cash',NULL,NULL),(14,'9','Cash','2500','2026-11-04 10:07:55',1,'Cash',NULL,NULL),(15,'1','Cash','4200','2026-11-04 16:21:50',1,'Cash','','');
+/*!40000 ALTER TABLE `tblpayment` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbluser`
+--
+
+DROP TABLE IF EXISTS `tbluser`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbluser` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `fname` varchar(45) DEFAULT NULL,
+  `lname` varchar(45) DEFAULT NULL,
+  `email` varchar(45) DEFAULT NULL,
+  `mobile` varchar(45) DEFAULT NULL,
+  `password` varchar(100) DEFAULT NULL,
+  `state` varchar(45) DEFAULT NULL,
+  `city` varchar(45) DEFAULT NULL,
+  `address` varchar(200) DEFAULT NULL,
+  `create_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `notes` text,
+  `gym_id` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_gym` (`gym_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbluser`
+--
+
+LOCK TABLES `tbluser` WRITE;
+/*!40000 ALTER TABLE `tbluser` DISABLE KEYS */;
+INSERT INTO `tbluser` VALUES (1,'atul','kumar','atul@gmail.com','8888888888','$2y$12$Rf/KKHMrkVUgnLCbe/NbtutwBUiod1dUmnDxKpXsv0toKkudbytwi','Uttar Pradesh','niuda','e-48 new asholk nagar hdd ','2022-02-16 16:48:25','active',NULL,1),(2,'ddd','ddf','df@gmail.com','9968556','e10adc3949ba59abbe56e057f20f883e','fgfg','fsdf',NULL,'2022-02-16 17:00:20','active',NULL,1),(3,'anuj','kumar','anuj@gmail.com','9999999999','f925916e2754e5e03f75dd58a5733251','up','noida',NULL,'2022-03-02 15:37:22','active',NULL,1),(4,'sssssss','sssssss','sssssss','sssssss','f925916e2754e5e03f75dd58a5733251','sssssss','sssssss',NULL,'2022-03-05 03:27:28','active',NULL,1),(5,'Anuj k','kumar','anuj.doca@Gmail.com','1234567890','202cb962ac59075b964b07152d234b70','sghsdg','sahgsh',NULL,'2022-03-08 17:43:23','active',NULL,1),(6,'John','Doe','john@test.com','1425635241','f925916e2754e5e03f75dd58a5733251','Delhi','New Delhi','ABC Street XYZ Colony','2022-05-22 02:31:54','active',NULL,1),(7,'Aman','Mehta','amanmehta519@gmail.com','9983665673','$2y$12$Z.ZxiRYO1F3rCIjg2ngAJOyMtSZllRZoBgiHiuoPOCePQ8qbmcgWK','Rajasthan','Mangalwad Chouraha Dist. Chittorgarh',NULL,'2026-11-04 05:34:42','active',NULL,1);
+/*!40000 ALTER TABLE `tbluser` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-11-04 22:35:51

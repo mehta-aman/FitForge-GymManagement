@@ -147,6 +147,9 @@ body {
       <i class="fa fa-envelope"></i> Contact
     </a>
     <?php if(!empty($_SESSION['uid'])): ?>
+      <a href="user-dashboard.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
+        <i class="fa fa-qrcode" style="color: #10b981;"></i> Digital Pass
+      </a>
       <a href="Booking-History.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'Booking-History.php' ? 'active' : ''; ?>">
         <i class="fa fa-calendar-check-o"></i> Bookings
       </a>
@@ -229,6 +232,11 @@ body {
         <i class="fa fa-angle-right ios-link-chevron"></i>
       </a>
       <?php if(!empty($_SESSION['uid'])): ?>
+        <a href="user-dashboard.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon" style="color: #10b981;"><i class="fa fa-qrcode"></i></span>
+          <span class="ios-link-text">Digital Pass &amp; Workouts</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
         <a href="Booking-History.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'Booking-History.php' ? 'active' : ''; ?>">
           <span class="ios-link-icon"><i class="fa fa-calendar-check-o"></i></span>
           <span class="ios-link-text">My Bookings</span>

@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=gymuser
+      - DB_PASS=gympassword
+      - DB_NAME=gymdb
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./gym:/var/www/html/gym
+
+  db:
+    image: mysql:8.4
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=gymdb
+      - MYSQL_USER=gymuser
+      - MYSQL_PASSWORD=gympassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./gym/migrations/backups/gymdb_pre_priority1_backup.sql:/docker-entrypoint-initdb.d/01_backup.sql
+      - ./gym/migrations/01_priority1_schema_enhancements.sql:/docker-entrypoint-initdb.d/02_priority1.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "gymuser", "-pgympassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:

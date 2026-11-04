@@ -2,25 +2,25 @@
 $currentPage = basename($_SERVER['PHP_SELF']); 
 ?>
 <aside class="app-sidebar">
-  <div class="sidebar-user" style="padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+  <div class="sidebar-user">
     <?php 
     $sideLogo = function_exists('get_logo_url') ? get_logo_url() : '';
     $sideName = function_exists('get_setting') ? get_setting('gym_name', 'GYM MS') : 'GYM MS';
     $sideTagline = function_exists('get_setting') ? get_setting('gym_tagline', 'FITNESS CLUB') : 'FITNESS CLUB';
     ?>
-    <?php if (!empty($sideLogo)): ?>
-      <img src="<?php echo htmlspecialchars($sideLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="width: 38px; height: 38px; border-radius: 10px; object-fit: contain; background: rgba(255,255,255,0.06); padding: 3px; border: 1px solid rgba(255,255,255,0.12);">
-    <?php else: ?>
-      <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px;">
-        <i class="fa fa-bolt"></i>
-      </div>
-    <?php endif; ?>
-    <div style="overflow: hidden; flex: 1;">
-      <div style="font-weight: 700; color: #fff; font-size: 14.5px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;"><?php echo htmlspecialchars($sideName, ENT_QUOTES, 'UTF-8'); ?></div>
-      <div style="font-size: 10px; color: var(--color-primary); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;"><?php echo htmlspecialchars($sideTagline, ENT_QUOTES, 'UTF-8'); ?></div>
+    <div class="sidebar-user__logo">
+      <?php if (!empty($sideLogo)): ?>
+        <img src="<?php echo htmlspecialchars($sideLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo">
+      <?php else: ?>
+        <i class="fa fa-bolt" style="color: var(--color-primary); font-size: 16px;"></i>
+      <?php endif; ?>
+    </div>
+    <div class="sidebar-user__info">
+      <div class="sidebar-user__name"><?php echo htmlspecialchars($sideName, ENT_QUOTES, 'UTF-8'); ?></div>
+      <div class="sidebar-user__tagline"><?php echo htmlspecialchars($sideTagline, ENT_QUOTES, 'UTF-8'); ?></div>
     </div>
     <!-- Mobile Sidebar Close Button -->
-    <button type="button" class="app-sidebar__close" data-toggle="sidebar" aria-label="Close Sidebar">
+    <button type="button" class="app-sidebar__close" data-toggle="sidebar" aria-label="Close Sidebar" title="Close Sidebar">
       <i class="fa fa-times"></i>
     </button>
   </div>
@@ -33,8 +33,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       </a>
     </li>
 
-    <!-- 2. Members & Memberships -->
-    <li class="treeview <?php echo in_array($currentPage, ['members.php', 'member-profile.php', 'member-create.php', 'memberships.php']) ? 'is-expanded' : ''; ?>">
+    <!-- 2. Attendance & QR Check-in -->
+    <li>
+      <a class="app-menu__item <?php echo ($currentPage == 'attendance.php') ? 'active' : ''; ?>" href="attendance.php">
+        <i class="app-menu__icon fa fa-qrcode" style="color: #10b981;"></i>
+        <span class="app-menu__label">Attendance &amp; Floor</span>
+      </a>
+    </li>
+
+    <!-- 3. Members & Memberships -->
+    <li class="treeview <?php echo in_array($currentPage, ['members.php', 'member-profile.php', 'member-create.php', 'memberships.php', 'trainers.php']) ? 'is-expanded' : ''; ?>">
       <a class="app-menu__item" href="#" data-toggle="treeview">
         <i class="app-menu__icon fa fa-users"></i>
         <span class="app-menu__label">Members &amp; Subs</span>
@@ -44,6 +52,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <li><a class="treeview-item <?php echo ($currentPage == 'members.php') ? 'active' : ''; ?>" href="members.php"><i class="icon fa fa-address-book-o"></i> Member Directory</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'member-create.php') ? 'active' : ''; ?>" href="member-create.php"><i class="icon fa fa-user-plus"></i> Add New Member</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'memberships.php') ? 'active' : ''; ?>" href="memberships.php"><i class="icon fa fa-id-card-o"></i> All Memberships</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'trainers.php') ? 'active' : ''; ?>" href="trainers.php"><i class="icon fa fa-user-secret"></i> Trainers &amp; Coaching</a></li>
       </ul>
     </li>
 
@@ -117,7 +126,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </li>
 
     <!-- 8. Settings & Themes -->
-    <li class="treeview <?php echo in_array($currentPage, ['settings.php', 'theme-settings.php', 'change-password.php', 'profile.php']) ? 'is-expanded' : ''; ?>">
+    <li class="treeview <?php echo in_array($currentPage, ['settings.php', 'theme-settings.php', 'notifications-hub.php', 'change-password.php', 'profile.php']) ? 'is-expanded' : ''; ?>">
       <a class="app-menu__item" href="#" data-toggle="treeview">
         <i class="app-menu__icon fa fa-cogs"></i>
         <span class="app-menu__label">Settings</span>
@@ -125,6 +134,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       </a>
       <ul class="treeview-menu">
         <li><a class="treeview-item <?php echo ($currentPage == 'settings.php') ? 'active' : ''; ?>" href="settings.php"><i class="icon fa fa-sliders"></i> System Settings</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'notifications-hub.php') ? 'active' : ''; ?>" href="notifications-hub.php"><i class="icon fa fa-whatsapp"></i> Alerts &amp; WhatsApp</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'theme-settings.php') ? 'active' : ''; ?>" href="theme-settings.php"><i class="icon fa fa-magic"></i> Theme &amp; Appearance</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'profile.php') ? 'active' : ''; ?>" href="profile.php"><i class="icon fa fa-user"></i> Admin Profile</a></li>
       </ul>

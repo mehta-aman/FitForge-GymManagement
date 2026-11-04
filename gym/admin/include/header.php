@@ -107,33 +107,93 @@ button.btn-primary {
 </div>
 
 <header class="app-header">
-  <a class="app-header__logo" href="index.php">
-    <?php if (!empty($adminLogoUrl)): ?>
-      <img src="<?php echo htmlspecialchars($adminLogoUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="app-header__logo-img">
-    <?php else: ?>
-      <div class="ios-logo-badge" style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; color: #fff;">
-        <i class="fa fa-bolt"></i>
-      </div>
-    <?php endif; ?>
-    <span style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em; color: #fff;"><?php echo htmlspecialchars($adminGymName, ENT_QUOTES, 'UTF-8'); ?></span>
-  </a>
-  <a class="app-sidebar__toggle" href="#" data-toggle="sidebar" aria-label="Toggle Sidebar">
-    <i class="fa fa-bars"></i>
-  </a>
+  <div class="app-header__left">
+    <a class="app-header__logo" href="index.php">
+      <?php if (!empty($adminLogoUrl)): ?>
+        <img src="<?php echo htmlspecialchars($adminLogoUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" class="app-header__logo-img">
+      <?php else: ?>
+        <div class="ios-logo-badge" style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; flex-shrink: 0;">
+          <i class="fa fa-bolt"></i>
+        </div>
+      <?php endif; ?>
+      <span class="app-header__logo-text" style="font-weight: 800; font-size: 17px; letter-spacing: -0.02em; color: #fff;"><?php echo htmlspecialchars($adminGymName, ENT_QUOTES, 'UTF-8'); ?></span>
+    </a>
+    <a class="app-sidebar__toggle" href="#" data-toggle="sidebar" aria-label="Toggle Sidebar" title="Toggle Sidebar">
+      <i class="fa fa-bars"></i>
+    </a>
+  </div>
 
-  <ul class="app-nav" style="margin: 0; padding: 0; display: flex; align-items: center; gap: 10px;">
+  <ul class="app-nav">
+    <?php
+    $topExpiring = isset($dbh) ? intval($dbh->query("SELECT count(*) FROM tbl_memberships WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)")->fetchColumn()) : 0;
+    $topDues = isset($dbh) ? intval($dbh->query("SELECT count(DISTINCT b.id) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) < (CAST(p.Price AS DECIMAL(10,2)) + CAST(COALESCE(p.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(p.discount,0) AS DECIMAL(10,2)))")->fetchColumn()) : 0;
+    $topFloor = isset($dbh) ? intval($dbh->query("SELECT count(*) FROM tbl_attendance WHERE DATE(check_in_time) = CURDATE() AND check_out_time IS NULL")->fetchColumn()) : 0;
+    $totalTopAlerts = $topExpiring + $topDues;
+    ?>
+    <!-- Live Floor Pill -->
+    <li class="d-none d-md-block">
+      <a href="attendance.php" class="app-nav__item" style="padding: 0 14px; border-radius: 20px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); font-size: 12px; color: #34d399; font-weight: 700; text-decoration: none;" title="<?php echo $topFloor; ?> members on gym floor right now">
+        <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+        <span><?php echo $topFloor; ?> On Floor</span>
+      </a>
+    </li>
+
+    <!-- Notification Bell Dropdown -->
+    <li class="dropdown">
+      <a class="app-nav__item app-nav__item-icon-only" href="#" data-toggle="dropdown" aria-label="Show Notifications" title="Operational Alerts">
+        <i class="fa fa-bell-o" style="font-size: 15px;"></i>
+        <?php if ($totalTopAlerts > 0): ?>
+          <span style="position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #0f172a; box-shadow: 0 0 6px #ef4444;"></span>
+        <?php endif; ?>
+      </a>
+      <ul class="dropdown-menu settings-menu dropdown-menu-right" style="min-width: 290px; padding: 10px;">
+        <li style="padding: 6px 10px 10px; font-weight: 700; color: #fff; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+          <span>Operational Alerts</span>
+          <span class="ios-badge ios-badge-danger" style="font-size: 10.5px; padding: 3px 8px;"><?php echo $totalTopAlerts; ?> Pending</span>
+        </li>
+        <li style="margin-top: 6px;">
+          <a class="dropdown-item" href="report-expirations.php?range=7">
+            <i class="fa fa-clock-o text-warning" style="font-size: 15px; width: 18px; text-align: center;"></i>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: #fff; font-size: 12.5px;"><?php echo $topExpiring; ?> Expiring Soon (7d)</div>
+              <div style="font-size: 11px; color: #94a3b8;">Send WhatsApp renewals</div>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="report-dues.php">
+            <i class="fa fa-money text-danger" style="font-size: 15px; width: 18px; text-align: center;"></i>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: #fff; font-size: 12.5px;"><?php echo $topDues; ?> Dues Pending</div>
+              <div style="font-size: 11px; color: #94a3b8;">Collect member balances</div>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="attendance.php">
+            <i class="fa fa-qrcode text-success" style="font-size: 15px; width: 18px; text-align: center;"></i>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: #fff; font-size: 12.5px;">Attendance Check-in</div>
+              <div style="font-size: 11px; color: #94a3b8;"><?php echo $topFloor; ?> currently training</div>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
+    <!-- Profile Menu Dropdown -->
     <li class="dropdown">
       <a class="app-nav__item" href="#" data-toggle="dropdown" aria-label="Open Profile Menu">
-        <i class="fa fa-shield" style="color: var(--color-primary);"></i>
-        <span><?php echo !empty($_SESSION['name']) ? htmlentities($_SESSION['name']) : 'Admin'; ?></span>
-        <i class="fa fa-angle-down" style="font-size: 12px; margin-left: 4px;"></i>
+        <i class="fa fa-shield" style="color: var(--color-primary); font-size: 14px;"></i>
+        <span style="max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo !empty($_SESSION['name']) ? htmlentities($_SESSION['name']) : 'Admin'; ?></span>
+        <i class="fa fa-angle-down" style="font-size: 11px; margin-left: 2px; color: #94a3b8;"></i>
       </a>
-      <ul class="dropdown-menu settings-menu dropdown-menu-right">
-        <li><a class="dropdown-item" href="profile.php"><i class="fa fa-user fa-lg"></i> Admin Profile</a></li>
-        <li><a class="dropdown-item" href="change-password.php"><i class="fa fa-key fa-lg"></i> Change Password</a></li>
-        <li><a class="dropdown-item" href="../index.php" target="_blank"><i class="fa fa-external-link fa-lg"></i> Public Portal</a></li>
-        <li style="border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0;"></li>
-        <li><a class="dropdown-item" href="logout.php" style="color: #f87171 !important;"><i class="fa fa-sign-out fa-lg"></i> Sign Out</a></li>
+      <ul class="dropdown-menu settings-menu dropdown-menu-right" style="min-width: 200px; padding: 8px;">
+        <li><a class="dropdown-item" href="profile.php"><i class="fa fa-user fa-lg" style="width: 18px; text-align: center;"></i> Admin Profile</a></li>
+        <li><a class="dropdown-item" href="change-password.php"><i class="fa fa-key fa-lg" style="width: 18px; text-align: center;"></i> Change Password</a></li>
+        <li><a class="dropdown-item" href="../index.php" target="_blank"><i class="fa fa-external-link fa-lg" style="width: 18px; text-align: center;"></i> Public Portal</a></li>
+        <li style="border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0;"></li>
+        <li><a class="dropdown-item" href="logout.php" style="color: #f87171 !important;"><i class="fa fa-sign-out fa-lg" style="width: 18px; text-align: center;"></i> Sign Out</a></li>
       </ul>
     </li>
   </ul>

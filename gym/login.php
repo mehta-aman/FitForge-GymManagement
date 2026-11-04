@@ -31,7 +31,7 @@ if (isset($_POST['submit'])) {
                         $_SESSION['email'] = $row['email'];
                         $_SESSION['name']  = $row['fname'];
                         $_SESSION['gym_id'] = $row['gym_id'] ?? 1;
-                        header("location: index.php");
+                        header("location: user-dashboard.php");
                         exit();
                     }
                 } else {
