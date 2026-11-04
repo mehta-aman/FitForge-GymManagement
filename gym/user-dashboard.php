@@ -354,9 +354,14 @@ $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urle
 
         <!-- Weekly Workout Plan -->
         <div>
-          <h4 style="font-size: 17px; font-weight: 700; margin-bottom: 12px; color: #fff;">
-            <i class="fa fa-list-ul" style="color: var(--color-primary); margin-right: 6px;"></i> Weekly Training Routine
-          </h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h4 style="font-size: 17px; font-weight: 700; margin: 0; color: #fff;">
+              <i class="fa fa-list-ul" style="color: var(--color-primary); margin-right: 6px;"></i> Weekly Training Routine
+            </h4>
+            <a href="profile.php#routine" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 12px;">
+              <i class="fa fa-pencil"></i> Customize Weekly Routine
+            </a>
+          </div>
           <?php if (!empty($workoutDays)): ?>
             <?php foreach ($workoutDays as $day => $exercises): ?>
               <div class="workout-day-card">

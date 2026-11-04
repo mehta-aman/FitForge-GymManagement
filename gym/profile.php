@@ -228,6 +228,168 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flashSuccess = 'Measurement record deleted successfully.';
             }
         }
+
+        // ----------------------------------------------------------------------
+        // Action D: Add Exercise to Weekly Schedule
+        // ----------------------------------------------------------------------
+        elseif ($action === 'add_workout') {
+            $dayOfWeek = in_array($_POST['day_of_week'] ?? '', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) ? $_POST['day_of_week'] : 'Monday';
+            $exerciseName = trim($_POST['exercise_name'] ?? '');
+            $targetMuscle = trim($_POST['target_muscle'] ?? 'Full Body');
+            $sets = max(1, min(20, intval($_POST['sets'] ?? 3)));
+            $reps = trim($_POST['reps'] ?? '10-12 reps');
+            $notes = trim($_POST['notes'] ?? '');
+
+            if (empty($exerciseName)) {
+                $flashError = 'Exercise name is required.';
+            } else {
+                $stmtAddW = $dbh->prepare("INSERT INTO tbl_workout_plans 
+                    (user_id, day_of_week, target_muscle, exercise_name, sets, reps, notes, gym_id)
+                    VALUES 
+                    (:uid, :day, :muscle, :name, :sets, :reps, :notes, :gym_id)");
+                $stmtAddW->execute([
+                    ':uid' => $userId,
+                    ':day' => $dayOfWeek,
+                    ':muscle' => $targetMuscle,
+                    ':name' => $exerciseName,
+                    ':sets' => $sets,
+                    ':reps' => $reps,
+                    ':notes' => $notes,
+                    ':gym_id' => $gymId
+                ]);
+                $flashSuccess = "Added '{$exerciseName}' to {$dayOfWeek} routine successfully!";
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Action E: Edit Existing Exercise in Routine
+        // ----------------------------------------------------------------------
+        elseif ($action === 'edit_workout') {
+            $wId = intval($_POST['workout_id'] ?? 0);
+            $dayOfWeek = in_array($_POST['day_of_week'] ?? '', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) ? $_POST['day_of_week'] : 'Monday';
+            $exerciseName = trim($_POST['exercise_name'] ?? '');
+            $targetMuscle = trim($_POST['target_muscle'] ?? 'Full Body');
+            $sets = max(1, min(20, intval($_POST['sets'] ?? 3)));
+            $reps = trim($_POST['reps'] ?? '10-12 reps');
+            $notes = trim($_POST['notes'] ?? '');
+
+            if ($wId <= 0 || empty($exerciseName)) {
+                $flashError = 'Valid exercise ID and name are required.';
+            } else {
+                $stmtEditW = $dbh->prepare("UPDATE tbl_workout_plans SET 
+                    day_of_week = :day,
+                    target_muscle = :muscle,
+                    exercise_name = :name,
+                    sets = :sets,
+                    reps = :reps,
+                    notes = :notes
+                    WHERE id = :id AND user_id = :uid");
+                $stmtEditW->execute([
+                    ':day' => $dayOfWeek,
+                    ':muscle' => $targetMuscle,
+                    ':name' => $exerciseName,
+                    ':sets' => $sets,
+                    ':reps' => $reps,
+                    ':notes' => $notes,
+                    ':id' => $wId,
+                    ':uid' => $userId
+                ]);
+                $flashSuccess = "Updated '{$exerciseName}' successfully!";
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Action F: Delete Exercise from Routine
+        // ----------------------------------------------------------------------
+        elseif ($action === 'delete_workout') {
+            $wId = intval($_POST['workout_id'] ?? 0);
+            if ($wId > 0) {
+                $delWStmt = $dbh->prepare("DELETE FROM tbl_workout_plans WHERE id = :id AND user_id = :uid");
+                $delWStmt->execute([':id' => $wId, ':uid' => $userId]);
+                $flashSuccess = 'Exercise removed from your weekly routine.';
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Action G: Apply Split Template or Clear Routine
+        // ----------------------------------------------------------------------
+        elseif ($action === 'apply_workout_template') {
+            $template = trim($_POST['template_type'] ?? '');
+            
+            // Delete existing routine for this user
+            $dbh->prepare("DELETE FROM tbl_workout_plans WHERE user_id = :uid")->execute([':uid' => $userId]);
+
+            $newExercises = [];
+            $tplName = '';
+            if ($template === 'ppl') {
+                $newExercises = [
+                    ['Monday', 'Push: Chest & Triceps', 'Barbell Bench Press', 4, '8-10 reps', 'Control descent, explosive press'],
+                    ['Monday', 'Push: Chest & Triceps', 'Incline Dumbbell Press', 3, '10-12 reps', 'Full stretch at bottom'],
+                    ['Monday', 'Push: Chest & Triceps', 'Overhead Dumbbell Press', 3, '10-12 reps', 'Core braced, strict form'],
+                    ['Monday', 'Push: Chest & Triceps', 'Cable Tricep Pushdowns', 3, '12-15 reps', 'Squeeze at extension'],
+                    ['Wednesday', 'Pull: Back & Biceps', 'Lat Pulldowns', 4, '10-12 reps', 'Drive elbows downwards'],
+                    ['Wednesday', 'Pull: Back & Biceps', 'Seated Cable Rows', 3, '10-12 reps', 'Retract scapula'],
+                    ['Wednesday', 'Pull: Back & Biceps', 'Dumbbell Hammer Curls', 3, '12 reps', 'Strict form, no swinging'],
+                    ['Wednesday', 'Pull: Back & Biceps', 'Face Pulls', 3, '15 reps', 'Rotator cuff health'],
+                    ['Friday', 'Legs & Core', 'Barbell Back Squats', 4, '8-10 reps', 'Deep hip hinge below parallel'],
+                    ['Friday', 'Legs & Core', 'Romanian Deadlifts', 3, '10-12 reps', 'Hamstring stretch'],
+                    ['Friday', 'Legs & Core', 'Leg Press', 3, '12-15 reps', 'Controlled cadence'],
+                    ['Friday', 'Legs & Core', 'Hanging Leg Raises', 3, '15 reps', 'Strict form, no swinging'],
+                ];
+                $tplName = 'Push / Pull / Legs (3-Day Split)';
+            } elseif ($template === 'upper_lower') {
+                $newExercises = [
+                    ['Monday', 'Upper Body Power', 'Barbell Bench Press', 4, '6-8 reps', 'Heavy compound'],
+                    ['Monday', 'Upper Body Power', 'Barbell Bent Over Row', 4, '6-8 reps', 'Torso at 45 degrees'],
+                    ['Monday', 'Upper Body Power', 'Overhead Military Press', 3, '8 reps', 'Full lockout'],
+                    ['Tuesday', 'Lower Body Power', 'Barbell Back Squats', 4, '6-8 reps', 'Deep hip hinge'],
+                    ['Tuesday', 'Lower Body Power', 'Romanian Deadlifts', 4, '8-10 reps', 'Posterior chain'],
+                    ['Tuesday', 'Lower Body Power', 'Standing Calf Raises', 4, '15 reps', 'Full extension'],
+                    ['Thursday', 'Upper Body Hypertrophy', 'Incline Dumbbell Press', 3, '10-12 reps', 'Upper chest focus'],
+                    ['Thursday', 'Upper Body Hypertrophy', 'Lat Pulldowns', 3, '10-12 reps', 'Wide grip'],
+                    ['Thursday', 'Upper Body Hypertrophy', 'Lateral Raises', 4, '15 reps', 'Side delts'],
+                    ['Friday', 'Lower Body Hypertrophy', 'Leg Press', 4, '12-15 reps', 'Continuous tension'],
+                    ['Friday', 'Lower Body Hypertrophy', 'Walking Dumbbell Lunges', 3, '20 paces', 'Glutes & quads'],
+                    ['Friday', 'Lower Body Hypertrophy', 'Plank Hold', 3, '60 secs', 'Core stability'],
+                ];
+                $tplName = 'Upper / Lower (4-Day Split)';
+            } elseif ($template === 'full_body') {
+                $newExercises = [
+                    ['Monday', 'Full Body A', 'Barbell Back Squats', 3, '10 reps', 'Foundation strength'],
+                    ['Monday', 'Full Body A', 'Dumbbell Bench Press', 3, '10 reps', 'Chest hypertrophy'],
+                    ['Monday', 'Full Body A', 'Seated Cable Row', 3, '12 reps', 'Upper back'],
+                    ['Wednesday', 'Full Body B', 'Deadlifts', 3, '6-8 reps', 'Posterior chain'],
+                    ['Wednesday', 'Full Body B', 'Overhead Dumbbell Press', 3, '10 reps', 'Shoulder strength'],
+                    ['Wednesday', 'Full Body B', 'Lat Pulldowns', 3, '10 reps', 'Back width'],
+                    ['Friday', 'Full Body C', 'Leg Press', 3, '12 reps', 'Quad volume'],
+                    ['Friday', 'Full Body C', 'Dips or Incline Push-ups', 3, '12 reps', 'Chest & triceps'],
+                    ['Friday', 'Full Body C', 'Hanging Knee Raises', 3, '15 reps', 'Core endurance'],
+                ];
+                $tplName = 'Full Body Circuit (3-Day Split)';
+            } elseif ($template === 'clear') {
+                $tplName = 'Weekly Routine Cleared';
+            }
+
+            if (!empty($newExercises)) {
+                $insTplStmt = $dbh->prepare("INSERT INTO tbl_workout_plans 
+                    (user_id, day_of_week, target_muscle, exercise_name, sets, reps, notes, gym_id)
+                    VALUES 
+                    (:uid, :day, :muscle, :name, :sets, :reps, :notes, :gym_id)");
+                foreach ($newExercises as $ex) {
+                    $insTplStmt->execute([
+                        ':uid' => $userId,
+                        ':day' => $ex[0],
+                        ':muscle' => $ex[1],
+                        ':name' => $ex[2],
+                        ':sets' => $ex[3],
+                        ':reps' => $ex[4],
+                        ':notes' => $ex[5],
+                        ':gym_id' => $gymId
+                    ]);
+                }
+            }
+            $flashSuccess = "Applied preset: {$tplName}!";
+        }
     }
 }
 
@@ -309,6 +471,34 @@ $chartBmi = json_encode(array_map(function($m) use ($currentHeightCm, $memberAge
     }
     return null;
 }, $chartRecords));
+
+// D. Member Weekly Training Routine
+$workoutStmt = $dbh->prepare("
+    SELECT * FROM tbl_workout_plans 
+    WHERE user_id = :uid 
+    ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'), id ASC
+");
+$workoutStmt->execute([':uid' => $userId]);
+$userWorkouts = $workoutStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$weeklyWorkouts = [
+    'Monday' => [],
+    'Tuesday' => [],
+    'Wednesday' => [],
+    'Thursday' => [],
+    'Friday' => [],
+    'Saturday' => [],
+    'Sunday' => []
+];
+$totalWeeklySets = 0;
+foreach ($userWorkouts as $w) {
+    $weeklyWorkouts[$w['day_of_week']][] = $w;
+    $totalWeeklySets += intval($w['sets']);
+}
+$totalWeeklyExercises = count($userWorkouts);
+$activeWorkoutDaysCount = count(array_filter($weeklyWorkouts, fn($dayArr) => !empty($dayArr)));
+$todayDayOfWeek = date('l');
+$todayExercises = $weeklyWorkouts[$todayDayOfWeek] ?? [];
 
 $gymName = get_setting('gym_name', 'Golden Eagle Gym');
 $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
@@ -459,6 +649,77 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       to { opacity: 1; transform: translateY(0); }
     }
     
+    /* Weekly Routine & Planner Styles */
+    .routine-day-card {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 22px 24px;
+      margin-bottom: 20px;
+      transition: all 0.2s ease;
+    }
+    .routine-day-card.is-today {
+      border-color: rgba(56, 189, 248, 0.45);
+      background: rgba(15, 23, 42, 0.85);
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.12);
+    }
+    .routine-day-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+    .exercise-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      transition: all 0.15s ease;
+    }
+    .exercise-item-row:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .routine-filter-chip {
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-block;
+    }
+    .routine-filter-chip:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .routine-filter-chip.active {
+      background: var(--color-primary);
+      color: #04101e;
+      border-color: var(--color-primary);
+      font-weight: 700;
+    }
+    .modal-content.ios-modal {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9);
+      color: #f8fafc;
+    }
+    .modal-content.ios-modal .modal-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 18px 24px;
+    }
+    .modal-content.ios-modal .modal-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 24px;
+    }
+    
     /* Print Stylesheet for Fitness Report */
     @media print {
       body {
@@ -563,19 +824,25 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               <button type="button" class="ios-btn ios-btn-primary" style="padding: 6px 14px; font-size: 12px; border-radius: 8px; flex: 1; text-align: center;" onclick="switchProfileTab('tab-measurements')">
                 <i class="fa fa-plus-circle"></i> Log Measurements
               </button>
+              <button type="button" class="ios-btn" style="padding: 6px 14px; font-size: 12px; border-radius: 8px; flex: 1; text-align: center; background: rgba(255,255,255,0.08); color: #fff;" onclick="switchProfileTab('tab-routine')">
+                <i class="fa fa-calendar-check-o"></i> Workout Routine
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 6-Tab Responsive Navigation Bar -->
+    <!-- Responsive Navigation Bar -->
     <div class="profile-nav-tabs no-print" id="profileTabs">
       <a href="#overview" class="profile-tab-btn active" onclick="switchProfileTab('tab-overview', this)">
         <i class="fa fa-dashboard"></i> Overview
       </a>
       <a href="#personal" class="profile-tab-btn" onclick="switchProfileTab('tab-personal', this)">
         <i class="fa fa-user"></i> Personal Info
+      </a>
+      <a href="#routine" class="profile-tab-btn" onclick="switchProfileTab('tab-routine', this)">
+        <i class="fa fa-calendar-check-o"></i> Exercise Routine
       </a>
       <a href="#measurements" class="profile-tab-btn" onclick="switchProfileTab('tab-measurements', this)">
         <i class="fa fa-sliders"></i> Body Measurements
@@ -813,6 +1080,70 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
           </div>
         </div>
       </div>
+
+      <!-- Overview Row 3: Today's Training Schedule & Weekly Routine Snapshot -->
+      <div class="row">
+        <div class="col-12">
+          <div class="ios-glass" style="padding: 24px 28px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin: 0 0 4px;">
+                  <i class="fa fa-calendar-check-o" style="color: var(--color-primary); margin-right: 8px;"></i>
+                  Today's Training Schedule: <span style="color: var(--color-primary);"><?php echo $todayDayOfWeek; ?></span>
+                </h3>
+                <p style="font-size: 12.5px; color: #94a3b8; margin: 0;">
+                  Weekly split: <?php echo $activeWorkoutDaysCount; ?> training days &bull; <?php echo 7 - $activeWorkoutDaysCount; ?> rest days (<?php echo $totalWeeklyExercises; ?> total exercises)
+                </p>
+              </div>
+              <div>
+                <button type="button" class="ios-btn ios-btn-primary" style="padding: 7px 16px; font-size: 12.5px;" onclick="switchProfileTab('tab-routine')">
+                  <i class="fa fa-pencil"></i> Customize Weekly Routine
+                </button>
+              </div>
+            </div>
+
+            <?php if (!empty($todayExercises)): ?>
+              <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <span style="font-size: 11px; text-transform: uppercase; color: #38bdf8; font-weight: 700; letter-spacing: 0.05em;">Target Focus</span>
+                  <div style="font-size: 16px; font-weight: 800; color: #fff;"><?php echo htmlspecialchars($todayExercises[0]['target_muscle']); ?></div>
+                </div>
+                <div style="text-align: right;">
+                  <span class="ios-badge ios-badge-info" style="font-size: 12px;"><?php echo count($todayExercises); ?> Exercises Scheduled</span>
+                </div>
+              </div>
+              <div class="row">
+                <?php foreach ($todayExercises as $tEx): ?>
+                  <div class="col-md-6 col-lg-4 mb-2">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                      <div>
+                        <strong style="color: #fff; font-size: 13px;"><?php echo htmlspecialchars($tEx['exercise_name']); ?></strong>
+                        <?php if (!empty($tEx['notes'])): ?>
+                          <div style="font-size: 11px; color: #94a3b8;"><?php echo htmlspecialchars($tEx['notes']); ?></div>
+                        <?php endif; ?>
+                      </div>
+                      <span style="font-family: monospace; font-size: 12px; color: #38bdf8; font-weight: 700; background: rgba(56,189,248,0.1); padding: 2px 8px; border-radius: 6px;">
+                        <?php echo $tEx['sets']; ?> &times; <?php echo htmlspecialchars($tEx['reps']); ?>
+                      </span>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; text-align: center;">
+                <i class="fa fa-bed" style="font-size: 24px; color: #64748b; margin-bottom: 8px; display: block;"></i>
+                <div style="color: #e2e8f0; font-weight: 700; font-size: 14.5px;">Scheduled Rest &amp; Active Recovery</div>
+                <div style="color: #94a3b8; font-size: 12.5px; margin-top: 4px;">No intense lifting scheduled for <?php echo $todayDayOfWeek; ?>. Rest, hydrate, and stretch.</div>
+                <div style="margin-top: 12px;">
+                  <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 8px;" onclick="openAddWorkoutModal('<?php echo $todayDayOfWeek; ?>')">
+                    <i class="fa fa-plus"></i> Add Workout to Today
+                  </button>
+                </div>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ======================================================================== -->
@@ -1003,6 +1334,215 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ======================================================================== -->
+    <!-- TAB: EXERCISE ROUTINE & WEEKLY SCHEDULE PLANNER -->
+    <!-- ======================================================================== -->
+    <div id="tab-routine" class="tab-content-panel">
+      <!-- Section Header Card -->
+      <div class="ios-glass" style="padding: 28px 32px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2 style="font-size: 22px; font-weight: 800; color: #fff; margin: 0 0 6px;">
+              <i class="fa fa-calendar-check-o" style="color: var(--color-primary); margin-right: 8px;"></i>
+              Weekly Exercise Routine &amp; Schedule
+            </h2>
+            <p style="font-size: 13.5px; color: #94a3b8; margin: 0;">
+              Customize your 7-day training split, add exercises, adjust sets and target reps, or select balanced workout templates.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="ios-btn ios-btn-primary" style="padding: 9px 18px; font-size: 13px;" onclick="openAddWorkoutModal()">
+              <i class="fa fa-plus-circle"></i> Add Exercise
+            </button>
+            <div class="dropdown" style="display: inline-block;">
+              <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-toggle="dropdown" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15);">
+                <i class="fa fa-magic"></i> Preset Splits <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-right" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 6px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <li>
+                  <form method="post" onsubmit="return confirm('Apply Push / Pull / Legs (3-Day Split)? This replaces your current schedule.');">
+                    <?php echo csrf_input(); ?>
+                    <input type="hidden" name="action" value="apply_workout_template">
+                    <input type="hidden" name="template_type" value="ppl">
+                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #e2e8f0; padding: 8px 16px; font-size: 13px; text-align: left;">
+                      <i class="fa fa-bolt" style="color: #38bdf8; margin-right: 6px;"></i> Push / Pull / Legs (3-Day Split)
+                    </button>
+                  </form>
+                </li>
+                <li>
+                  <form method="post" onsubmit="return confirm('Apply Upper / Lower (4-Day Split)? This replaces your current schedule.');">
+                    <?php echo csrf_input(); ?>
+                    <input type="hidden" name="action" value="apply_workout_template">
+                    <input type="hidden" name="template_type" value="upper_lower">
+                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #e2e8f0; padding: 8px 16px; font-size: 13px; text-align: left;">
+                      <i class="fa fa-fire" style="color: #fbbf24; margin-right: 6px;"></i> Upper / Lower (4-Day Split)
+                    </button>
+                  </form>
+                </li>
+                <li>
+                  <form method="post" onsubmit="return confirm('Apply Full Body Circuit (3-Day Split)? This replaces your current schedule.');">
+                    <?php echo csrf_input(); ?>
+                    <input type="hidden" name="action" value="apply_workout_template">
+                    <input type="hidden" name="template_type" value="full_body">
+                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #e2e8f0; padding: 8px 16px; font-size: 13px; text-align: left;">
+                      <i class="fa fa-refresh" style="color: #34d399; margin-right: 6px;"></i> Full Body Circuit (3-Day Split)
+                    </button>
+                  </form>
+                </li>
+                <li class="divider" style="background: rgba(255,255,255,0.08); margin: 6px 0;"></li>
+                <li>
+                  <form method="post" onsubmit="return confirm('Clear your entire weekly routine? You can re-add exercises or apply a preset anytime.');">
+                    <?php echo csrf_input(); ?>
+                    <input type="hidden" name="action" value="apply_workout_template">
+                    <input type="hidden" name="template_type" value="clear">
+                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #f87171; padding: 8px 16px; font-size: 13px; text-align: left;">
+                      <i class="fa fa-trash-o" style="margin-right: 6px;"></i> Clear All Exercises
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Summary KPI Metrics -->
+        <div class="row" style="margin-top: 22px;">
+          <div class="col-sm-6 col-md-3 mb-2">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 16px;">
+              <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; display: block;">Total Exercises</span>
+              <span style="font-size: 20px; font-weight: 800; color: #fff;"><?php echo $totalWeeklyExercises; ?> planned</span>
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-3 mb-2">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 16px;">
+              <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; display: block;">Weekly Volume</span>
+              <span style="font-size: 20px; font-weight: 800; color: #38bdf8;"><?php echo $totalWeeklySets; ?> total sets</span>
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-3 mb-2">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 16px;">
+              <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; display: block;">Training Split</span>
+              <span style="font-size: 20px; font-weight: 800; color: #34d399;"><?php echo $activeWorkoutDaysCount; ?> active / <?php echo 7 - $activeWorkoutDaysCount; ?> rest</span>
+            </div>
+          </div>
+          <div class="col-sm-6 col-md-3 mb-2">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 16px;">
+              <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; display: block;">Today's Focus (<?php echo $todayDayOfWeek; ?>)</span>
+              <span style="font-size: 15px; font-weight: 800; color: #fbbf24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                <?php echo !empty($todayExercises) ? htmlspecialchars($todayExercises[0]['target_muscle']) : 'Rest & Recovery'; ?>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Days Filter Chips -->
+      <div style="margin-bottom: 20px; overflow-x: auto; white-space: nowrap; padding-bottom: 6px;">
+        <span class="routine-filter-chip active" onclick="filterRoutineDays('all', this)">All Days</span>
+        <?php foreach (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $dayName): ?>
+          <?php 
+            $count = count($weeklyWorkouts[$dayName]);
+            $isToday = ($dayName === $todayDayOfWeek);
+          ?>
+          <span class="routine-filter-chip" onclick="filterRoutineDays('<?php echo $dayName; ?>', this)">
+            <?php echo substr($dayName, 0, 3); ?> (<?php echo $count; ?>)<?php echo $isToday ? ' &bull; Today' : ''; ?>
+          </span>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- 7-Day Routine Cards Container -->
+      <div class="row">
+        <?php foreach (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day): ?>
+          <?php 
+            $exercises = $weeklyWorkouts[$day];
+            $hasExercises = !empty($exercises);
+            $isToday = ($day === $todayDayOfWeek);
+            $daySets = array_sum(array_column($exercises, 'sets'));
+          ?>
+          <div class="col-12 routine-day-card <?php echo $isToday ? 'is-today' : ''; ?>" data-day="<?php echo $day; ?>">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0;">
+                  <?php echo $day; ?>
+                </h3>
+                <?php if ($isToday): ?>
+                  <span class="ios-badge ios-badge-success" style="font-size: 11px;">TODAY</span>
+                <?php endif; ?>
+                <?php if ($hasExercises): ?>
+                  <span class="ios-badge ios-badge-info" style="font-size: 11.5px;">
+                    <?php echo htmlspecialchars($exercises[0]['target_muscle']); ?>
+                  </span>
+                  <span style="font-size: 12px; color: #94a3b8;">
+                    <?php echo count($exercises); ?> exercises &bull; <?php echo $daySets; ?> sets
+                  </span>
+                <?php else: ?>
+                  <span class="ios-badge" style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 11px;">
+                    Rest &amp; Recovery
+                  </span>
+                <?php endif; ?>
+              </div>
+              <div>
+                <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 12px;" onclick="openAddWorkoutModal('<?php echo $day; ?>')">
+                  <i class="fa fa-plus"></i> Add Exercise
+                </button>
+              </div>
+            </div>
+
+            <?php if ($hasExercises): ?>
+              <div class="exercise-list-group">
+                <?php foreach ($exercises as $ex): ?>
+                  <div class="exercise-item-row">
+                    <div style="flex: 1; min-width: 200px;">
+                      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <strong style="color: #fff; font-size: 14px;"><?php echo htmlspecialchars($ex['exercise_name']); ?></strong>
+                        <span style="font-size: 10.5px; background: rgba(56,189,248,0.12); color: #38bdf8; padding: 2px 8px; border-radius: 6px;">
+                          <?php echo htmlspecialchars($ex['target_muscle']); ?>
+                        </span>
+                      </div>
+                      <?php if (!empty($ex['notes'])): ?>
+                        <div style="font-size: 12px; color: #94a3b8; margin-top: 3px;">
+                          <i class="fa fa-info-circle" style="color: #64748b; margin-right: 4px;"></i><?php echo htmlspecialchars($ex['notes']); ?>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                      <div style="font-family: monospace; font-size: 13.5px; font-weight: 700; color: #38bdf8; background: rgba(56,189,248,0.08); padding: 5px 12px; border-radius: 8px;">
+                        <?php echo $ex['sets']; ?> sets &times; <?php echo htmlspecialchars($ex['reps']); ?>
+                      </div>
+                      <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn btn-sm btn-outline-light" style="padding: 4px 8px; font-size: 12px; border-radius: 6px; border-color: rgba(255,255,255,0.15);" onclick="openEditWorkoutModal(<?php echo $ex['id']; ?>, '<?php echo addslashes($ex['day_of_week']); ?>', '<?php echo addslashes($ex['target_muscle']); ?>', '<?php echo addslashes($ex['exercise_name']); ?>', <?php echo intval($ex['sets']); ?>, '<?php echo addslashes($ex['reps']); ?>', '<?php echo addslashes($ex['notes'] ?? ''); ?>')">
+                          <i class="fa fa-pencil"></i>
+                        </button>
+                        <form method="post" style="display: inline;" onsubmit="return confirm('Remove <?php echo addslashes($ex['exercise_name']); ?> from <?php echo $day; ?> routine?');">
+                          <?php echo csrf_input(); ?>
+                          <input type="hidden" name="action" value="delete_workout">
+                          <input type="hidden" name="workout_id" value="<?php echo $ex['id']; ?>">
+                          <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 4px 8px; font-size: 12px; border-radius: 6px;">
+                            <i class="fa fa-trash-o"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <div style="text-align: center; padding: 22px 16px; background: rgba(255,255,255,0.015); border: 1px dashed rgba(255,255,255,0.07); border-radius: 12px; color: #64748b;">
+                <i class="fa fa-bed" style="font-size: 22px; color: #475569; display: block; margin-bottom: 6px;"></i>
+                <span style="font-size: 13px;">No workouts scheduled for <?php echo $day; ?>. Scheduled Rest &amp; Muscle Recovery Day.</span>
+                <div style="margin-top: 10px;">
+                  <button type="button" class="ios-btn ios-btn-primary" style="padding: 5px 14px; font-size: 12px;" onclick="openAddWorkoutModal('<?php echo $day; ?>')">
+                    <i class="fa fa-plus"></i> Schedule Workout
+                  </button>
+                </div>
+              </div>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; ?>
       </div>
     </div>
 
@@ -1593,6 +2133,40 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
           </div>
         <?php endif; ?>
 
+        <!-- Weekly Training Routine Summary in Report -->
+        <?php if (!empty($userWorkouts)): ?>
+          <div style="margin-bottom: 28px;">
+            <h4 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">
+              <i class="fa fa-calendar-check-o" style="color: var(--color-primary); margin-right: 6px;"></i>
+              Weekly Training &amp; Exercise Routine
+            </h4>
+            <div class="row">
+              <?php foreach ($weeklyWorkouts as $repDay => $repExercises): ?>
+                <?php if (!empty($repExercises)): ?>
+                  <div class="col-md-6 mb-3">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 16px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="color: var(--color-primary); font-size: 14px;"><?php echo $repDay; ?></strong>
+                        <span style="font-size: 11px; background: rgba(56,189,248,0.15); color: #38bdf8; padding: 2px 8px; border-radius: 6px;">
+                          <?php echo htmlspecialchars($repExercises[0]['target_muscle']); ?>
+                        </span>
+                      </div>
+                      <div style="font-size: 12.5px; color: #cbd5e1;">
+                        <?php foreach ($repExercises as $repEx): ?>
+                          <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                            <span>&bull; <?php echo htmlspecialchars($repEx['exercise_name']); ?></span>
+                            <span style="color: #94a3b8; font-family: monospace; font-size: 11.5px;"><?php echo $repEx['sets']; ?> &times; <?php echo htmlspecialchars($repEx['reps']); ?></span>
+                          </div>
+                        <?php endforeach; ?>
+                      </div>
+                    </div>
+                  </div>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <!-- Clinical Disclaimer -->
         <div style="background: rgba(255,255,255,0.02); border-radius: 10px; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.06); font-size: 11.5px; color: #94a3b8; line-height: 1.5;">
           <strong>Clinical &amp; Screening Notice:</strong> All mathematical estimates (BMI, BMR, TDEE, Caloric Targets, and Macronutrient Allocations) are computational models intended for sports training and general wellness screening. They do not constitute diagnostic medical advice, clinical dietetics, or prescribed disease treatment. Consult a licensed physician or certified sports dietitian before undertaking intensive caloric restriction or significant training changes.
@@ -1600,6 +2174,205 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       </div>
     </div>
 
+  </div>
+
+  <!-- ======================================================================== -->
+  <!-- MODALS: ADD & EDIT EXERCISES -->
+  <!-- ======================================================================== -->
+  <datalist id="exerciseSuggestions">
+    <option value="Barbell Bench Press">
+    <option value="Incline Dumbbell Press">
+    <option value="Cable Chest Fly">
+    <option value="Dips">
+    <option value="Push-ups">
+    <option value="Barbell Back Squat">
+    <option value="Romanian Deadlift">
+    <option value="Leg Press">
+    <option value="Leg Extension">
+    <option value="Hamstring Leg Curl">
+    <option value="Standing Calf Raises">
+    <option value="Walking Lunges">
+    <option value="Deadlift">
+    <option value="Pull-ups / Chin-ups">
+    <option value="Lat Pulldown">
+    <option value="Barbell Bent Over Row">
+    <option value="Seated Cable Row">
+    <option value="Dumbbell Single-Arm Row">
+    <option value="Overhead Military Press">
+    <option value="Dumbbell Lateral Raise">
+    <option value="Face Pulls">
+    <option value="Barbell Bicep Curl">
+    <option value="Dumbbell Hammer Curl">
+    <option value="Preacher Curl">
+    <option value="Cable Tricep Pushdown">
+    <option value="Skull Crushers">
+    <option value="Overhead Tricep Extension">
+    <option value="Plank Hold">
+    <option value="Hanging Leg Raises">
+    <option value="Abdominal Cable Crunches">
+    <option value="Treadmill Incline Walk / Run">
+    <option value="Rowing Machine HIIT">
+    <option value="Stairmaster Cardio">
+  </datalist>
+
+  <!-- Add Workout Modal -->
+  <div class="modal fade" id="addWorkoutModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content ios-modal">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.8;">&times;</button>
+          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff;">
+            <i class="fa fa-plus-circle" style="color: var(--color-primary); margin-right: 6px;"></i> Add Exercise to Routine
+          </h4>
+        </div>
+        <form method="post" action="profile.php#routine">
+          <div class="modal-body" style="padding: 24px;">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="add_workout">
+
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="ios-form-group">
+                  <label class="ios-label">Day of Week <span style="color: #f87171;">*</span></label>
+                  <select name="day_of_week" id="addWorkoutDay" class="ios-input" required>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="ios-form-group">
+                  <label class="ios-label">Target Muscle Focus</label>
+                  <select name="target_muscle" id="addWorkoutMuscle" class="ios-input">
+                    <option value="Chest &amp; Triceps">Chest &amp; Triceps</option>
+                    <option value="Back &amp; Biceps">Back &amp; Biceps</option>
+                    <option value="Legs &amp; Core">Legs &amp; Core</option>
+                    <option value="Shoulders &amp; Arms">Shoulders &amp; Arms</option>
+                    <option value="Arms (Biceps &amp; Triceps)">Arms (Biceps &amp; Triceps)</option>
+                    <option value="Full Body Circuit">Full Body Circuit</option>
+                    <option value="Abs &amp; Core">Abs &amp; Core</option>
+                    <option value="Cardio / Conditioning">Cardio / Conditioning</option>
+                    <option value="Mobility &amp; Recovery">Mobility &amp; Recovery</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="ios-form-group">
+              <label class="ios-label">Exercise Name <span style="color: #f87171;">*</span></label>
+              <input type="text" name="exercise_name" id="addWorkoutName" class="ios-input" list="exerciseSuggestions" placeholder="e.g. Barbell Bench Press" required>
+              <small style="color: #64748b; font-size: 11px;">Select from suggestions or type your custom exercise.</small>
+            </div>
+
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="ios-form-group">
+                  <label class="ios-label">Sets <span style="color: #f87171;">*</span></label>
+                  <input type="number" name="sets" id="addWorkoutSets" class="ios-input" min="1" max="20" value="3" required>
+                </div>
+              </div>
+              <div class="col-sm-8">
+                <div class="ios-form-group">
+                  <label class="ios-label">Target Reps / Cadence <span style="color: #f87171;">*</span></label>
+                  <input type="text" name="reps" id="addWorkoutReps" class="ios-input" value="10-12 reps" placeholder="e.g. 8-10 reps, 15 reps, To Failure" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="ios-form-group">
+              <label class="ios-label">Coaching Notes / Form Cues (Optional)</label>
+              <input type="text" name="notes" id="addWorkoutNotes" class="ios-input" placeholder="e.g. Control descent, 90s rest, drop set on last set">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15);">Cancel</button>
+            <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 20px; font-size: 13px;">
+              <i class="fa fa-save"></i> Save Exercise
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Workout Modal -->
+  <div class="modal fade" id="editWorkoutModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content ios-modal">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.8;">&times;</button>
+          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff;">
+            <i class="fa fa-pencil" style="color: var(--color-primary); margin-right: 6px;"></i> Edit Routine Exercise
+          </h4>
+        </div>
+        <form method="post" action="profile.php#routine">
+          <div class="modal-body" style="padding: 24px;">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="edit_workout">
+            <input type="hidden" name="workout_id" id="editWorkoutId" value="">
+
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="ios-form-group">
+                  <label class="ios-label">Day of Week <span style="color: #f87171;">*</span></label>
+                  <select name="day_of_week" id="editWorkoutDay" class="ios-input" required>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="ios-form-group">
+                  <label class="ios-label">Target Muscle Focus</label>
+                  <input type="text" name="target_muscle" id="editWorkoutMuscle" class="ios-input" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="ios-form-group">
+              <label class="ios-label">Exercise Name <span style="color: #f87171;">*</span></label>
+              <input type="text" name="exercise_name" id="editWorkoutName" class="ios-input" list="exerciseSuggestions" required>
+            </div>
+
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="ios-form-group">
+                  <label class="ios-label">Sets <span style="color: #f87171;">*</span></label>
+                  <input type="number" name="sets" id="editWorkoutSets" class="ios-input" min="1" max="20" required>
+                </div>
+              </div>
+              <div class="col-sm-8">
+                <div class="ios-form-group">
+                  <label class="ios-label">Target Reps <span style="color: #f87171;">*</span></label>
+                  <input type="text" name="reps" id="editWorkoutReps" class="ios-input" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="ios-form-group">
+              <label class="ios-label">Coaching Notes / Form Cues</label>
+              <input type="text" name="notes" id="editWorkoutNotes" class="ios-input">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15);">Cancel</button>
+            <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 20px; font-size: 13px;">
+              <i class="fa fa-check"></i> Update Exercise
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <script src="js/vendor/jquery-3.2.1.min.js"></script>
@@ -1636,6 +2409,41 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         switchProfileTab('tab-' + hash);
       }
     });
+
+    // Routine Planner Modal & Filter Functions
+    function openAddWorkoutModal(day) {
+      if (day) {
+        document.getElementById('addWorkoutDay').value = day;
+      }
+      $('#addWorkoutModal').modal('show');
+    }
+
+    function openEditWorkoutModal(id, day, muscle, name, sets, reps, notes) {
+      document.getElementById('editWorkoutId').value = id;
+      document.getElementById('editWorkoutDay').value = day;
+      document.getElementById('editWorkoutMuscle').value = muscle;
+      document.getElementById('editWorkoutName').value = name;
+      document.getElementById('editWorkoutSets').value = sets;
+      document.getElementById('editWorkoutReps').value = reps;
+      document.getElementById('editWorkoutNotes').value = notes;
+      $('#editWorkoutModal').modal('show');
+    }
+
+    function filterRoutineDays(day, btn) {
+      document.querySelectorAll('.routine-filter-chip').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      if (btn) btn.classList.add('active');
+
+      const allCards = document.querySelectorAll('.routine-day-card');
+      allCards.forEach(function(card) {
+        if (day === 'all' || card.getAttribute('data-day') === day) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
 
     // Metric <-> Imperial Unit Auto-Conversion on Form
     function toggleFormUnits(unit) {
