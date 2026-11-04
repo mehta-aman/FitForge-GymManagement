@@ -1366,7 +1366,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               <i class="fa fa-magic" style="color: #fbbf24; margin-right: 6px;"></i> Preset Workout Splits
             </button>
             <button type="button" class="btn btn-sm btn-outline-info" id="btnBrowseCatalog" onclick="scrollToExerciseCatalog()" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.25); color: #38bdf8; cursor: pointer;">
-              <i class="fa fa-book" style="margin-right: 6px;"></i> Browse 60+ Exercises
+              <i class="fa fa-book" style="margin-right: 6px;"></i> Browse <?php echo count($masterExercises); ?> Exercises
             </button>
           </div>
         </div>
@@ -2367,7 +2367,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
                     <option value="Abs &amp; Core">Abs &amp; Core</option>
                     <option value="Cardio">Cardio &amp; Conditioning</option>
                     <option value="Functional &amp; Mobility">Functional &amp; Mobility</option>
-                    <option value="all">All Muscles (Show Complete 380+ Catalog)</option>
+                    <option value="all">All Muscles (Show Complete <?php echo count($masterExercises); ?> Exercise Library)</option>
                   </select>
                 </div>
               </div>
@@ -2470,7 +2470,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
                     <option value="Abs &amp; Core">Abs &amp; Core</option>
                     <option value="Cardio">Cardio &amp; Conditioning</option>
                     <option value="Functional &amp; Mobility">Functional &amp; Mobility</option>
-                    <option value="all">All Muscles (Show Complete Catalog)</option>
+                    <option value="all">All Muscles (Show Complete <?php echo count($masterExercises); ?> Exercise Library)</option>
                   </select>
                 </div>
               </div>
