@@ -123,3 +123,63 @@ function handle_image_upload($file_array, $target_subfolder = 'uploads', $max_si
     $relative_path = 'img/' . trim($target_subfolder, '/') . '/' . $filename;
     return ['success' => true, 'path' => $relative_path, 'filename' => $filename];
 }
+
+// Session ID Regeneration (Mitigates Session Fixation)
+function regenerate_secure_session() {
+    init_secure_session();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
+}
+
+// Brute Force Login Throttling
+function check_login_throttle($email, $dbh, $max_attempts = 5, $lockout_minutes = 15) {
+    if (!$dbh) return true; // Fail open if db connection issue
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    $time_window = time() - ($lockout_minutes * 60);
+
+    try {
+        // Purge old attempts beyond 2 hours
+        $purge_time = time() - 7200;
+        $dbh->prepare("DELETE FROM tbl_login_attempts WHERE attempt_time < ?")->execute([$purge_time]);
+
+        $stmt = $dbh->prepare("SELECT COUNT(*) FROM tbl_login_attempts WHERE (ip_address = ? OR email = ?) AND attempt_time > ?");
+        $stmt->execute([$ip, $email, $time_window]);
+        $attempts = intval($stmt->fetchColumn());
+
+        if ($attempts >= $max_attempts) {
+            $oldest = $dbh->prepare("SELECT MIN(attempt_time) FROM tbl_login_attempts WHERE (ip_address = ? OR email = ?) AND attempt_time > ?");
+            $oldest->execute([$ip, $email, $time_window]);
+            $oldest_time = intval($oldest->fetchColumn());
+            $remaining = ceil((($oldest_time + ($lockout_minutes * 60)) - time()) / 60);
+            if ($remaining < 1) $remaining = 1;
+            return [
+                'allowed' => false,
+                'remaining_minutes' => $remaining,
+                'message' => "Too many failed login attempts. Account temporarily locked. Please try again in {$remaining} minute(s)."
+            ];
+        }
+    } catch (Exception $e) {
+        // Fail open if table error
+    }
+
+    return ['allowed' => true];
+}
+
+function record_failed_login($email, $dbh) {
+    if (!$dbh) return;
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    try {
+        $stmt = $dbh->prepare("INSERT INTO tbl_login_attempts (ip_address, email, attempt_time) VALUES (?, ?, ?)");
+        $stmt->execute([$ip, $email, time()]);
+    } catch (Exception $e) {}
+}
+
+function clear_login_attempts($email, $dbh) {
+    if (!$dbh) return;
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    try {
+        $stmt = $dbh->prepare("DELETE FROM tbl_login_attempts WHERE ip_address = ? OR email = ?");
+        $stmt->execute([$ip, $email]);
+    } catch (Exception $e) {}
+}
