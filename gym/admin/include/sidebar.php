@@ -2,25 +2,25 @@
 $currentPage = basename($_SERVER['PHP_SELF']); 
 ?>
 <aside class="app-sidebar">
-  <div class="sidebar-user" style="padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+  <div class="sidebar-user">
     <?php 
     $sideLogo = function_exists('get_logo_url') ? get_logo_url() : '';
     $sideName = function_exists('get_setting') ? get_setting('gym_name', 'GYM MS') : 'GYM MS';
     $sideTagline = function_exists('get_setting') ? get_setting('gym_tagline', 'FITNESS CLUB') : 'FITNESS CLUB';
     ?>
-    <?php if (!empty($sideLogo)): ?>
-      <img src="<?php echo htmlspecialchars($sideLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="width: 38px; height: 38px; border-radius: 10px; object-fit: contain; background: rgba(255,255,255,0.06); padding: 3px; border: 1px solid rgba(255,255,255,0.12);">
-    <?php else: ?>
-      <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px;">
-        <i class="fa fa-bolt"></i>
-      </div>
-    <?php endif; ?>
-    <div style="overflow: hidden; flex: 1;">
-      <div style="font-weight: 700; color: #fff; font-size: 14.5px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;"><?php echo htmlspecialchars($sideName, ENT_QUOTES, 'UTF-8'); ?></div>
-      <div style="font-size: 10px; color: var(--color-primary); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;"><?php echo htmlspecialchars($sideTagline, ENT_QUOTES, 'UTF-8'); ?></div>
+    <div class="sidebar-user__logo">
+      <?php if (!empty($sideLogo)): ?>
+        <img src="<?php echo htmlspecialchars($sideLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo">
+      <?php else: ?>
+        <i class="fa fa-bolt" style="color: var(--color-primary); font-size: 16px;"></i>
+      <?php endif; ?>
+    </div>
+    <div class="sidebar-user__info">
+      <div class="sidebar-user__name"><?php echo htmlspecialchars($sideName, ENT_QUOTES, 'UTF-8'); ?></div>
+      <div class="sidebar-user__tagline"><?php echo htmlspecialchars($sideTagline, ENT_QUOTES, 'UTF-8'); ?></div>
     </div>
     <!-- Mobile Sidebar Close Button -->
-    <button type="button" class="app-sidebar__close" data-toggle="sidebar" aria-label="Close Sidebar">
+    <button type="button" class="app-sidebar__close" data-toggle="sidebar" aria-label="Close Sidebar" title="Close Sidebar">
       <i class="fa fa-times"></i>
     </button>
   </div>

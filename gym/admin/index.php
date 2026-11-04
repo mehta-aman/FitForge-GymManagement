@@ -66,12 +66,17 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
 
   <main class="app-content">
     <div class="app-title">
-      <div>
-        <h1><i class="fa fa-tachometer" style="color: var(--color-primary); margin-right: 8px;"></i> Control Center</h1>
-        <p>Real-time analytics across member subscriptions, revenue streams, and club activities</p>
+      <div style="display: flex; align-items: center; min-width: 0;">
+        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); display: inline-flex; align-items: center; justify-content: center; margin-right: 14px; flex-shrink: 0;">
+          <i class="fa fa-tachometer" style="color: var(--color-primary); font-size: 18px;"></i>
+        </div>
+        <div style="min-width: 0;">
+          <h1>Control Center</h1>
+          <p>Real-time analytics across member subscriptions, revenue streams, and club activities</p>
+        </div>
       </div>
-      <ul class="app-breadcrumb breadcrumb">
-        <li class="breadcrumb-item"><i class="fa fa-home"></i></li>
+      <ul class="app-breadcrumb breadcrumb d-none d-sm-flex">
+        <li class="breadcrumb-item"><a href="index.php"><i class="fa fa-home"></i></a></li>
         <li class="breadcrumb-item active">Dashboard</li>
       </ul>
     </div>
@@ -79,7 +84,7 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
     <!-- KPI Row 1: Membership Lifecycle -->
     <div class="row">
       <!-- Total Members -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-sm-6 col-lg-3">
         <a href="members.php" class="widget-small info">
           <div class="icon"><i class="fa fa-users"></i></div>
           <div class="info">
@@ -90,11 +95,9 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
       </div>
 
       <!-- Active Memberships -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-sm-6 col-lg-3">
         <a href="memberships.php?filter=active" class="widget-small primary">
-          <div class="icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.25)) !important; color: #34d399 !important; border-color: rgba(16, 185, 129, 0.4) !important;">
-            <i class="fa fa-check-circle"></i>
-          </div>
+          <div class="icon"><i class="fa fa-check-circle"></i></div>
           <div class="info">
             <h4>Active Subs</h4>
             <p><?php echo $activeMemberships; ?></p>
@@ -103,7 +106,7 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
       </div>
 
       <!-- Expiring Soon -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-sm-6 col-lg-3">
         <a href="memberships.php?filter=renewals" class="widget-small warning">
           <div class="icon"><i class="fa fa-clock-o"></i></div>
           <div class="info">
@@ -114,7 +117,7 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
       </div>
 
       <!-- Expired Subs -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-sm-6 col-lg-3">
         <a href="memberships.php?filter=expired" class="widget-small danger">
           <div class="icon"><i class="fa fa-exclamation-triangle"></i></div>
           <div class="info">
@@ -129,15 +132,15 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
     <div class="row">
       <!-- Total Revenue -->
       <div class="col-md-6">
-        <div class="tile" style="padding: 24px 28px; margin-bottom: 24px;">
+        <div class="tile" style="margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total Collected Revenue</span>
-              <h2 style="font-size: 38px; font-weight: 800; color: #34d399; margin: 6px 0 0; letter-spacing: -0.04em;">
+              <span style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Total Collected Revenue</span>
+              <h2 style="font-size: 32px; font-weight: 800; color: #10b981; margin: 4px 0 0; letter-spacing: -0.03em; line-height: 1.1;">
                 <?php echo format_currency($totalRevenue); ?>
               </h2>
             </div>
-            <div class="ios-auth-icon" style="margin: 0; width: 56px; height: 56px; font-size: 24px; background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.35);">
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.28); color: #34d399; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <i class="fa fa-money"></i>
             </div>
           </div>
@@ -146,15 +149,15 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
 
       <!-- Outstanding Balance -->
       <div class="col-md-6">
-        <div class="tile" style="padding: 24px 28px; margin-bottom: 24px;">
+        <div class="tile" style="margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Outstanding Member Balance</span>
-              <h2 style="font-size: 38px; font-weight: 800; color: #fbbf24; margin: 6px 0 0; letter-spacing: -0.04em;">
+              <span style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Outstanding Member Balance</span>
+              <h2 style="font-size: 32px; font-weight: 800; color: #fbbf24; margin: 4px 0 0; letter-spacing: -0.03em; line-height: 1.1;">
                 <?php echo format_currency($outstandingBalance); ?>
               </h2>
             </div>
-            <div class="ios-auth-icon" style="margin: 0; width: 56px; height: 56px; font-size: 24px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.28); color: #fbbf24; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <i class="fa fa-hourglass-half"></i>
             </div>
           </div>
@@ -166,15 +169,15 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
     <div class="row">
       <!-- Left: Revenue Growth Trend -->
       <div class="col-lg-8">
-        <div class="tile" style="padding: 24px 28px; margin-bottom: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
+        <div class="tile" style="min-height: 360px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
             <div>
-              <h3 class="tile-title" style="margin: 0;"><i class="fa fa-line-chart" style="color: var(--color-primary); margin-right: 6px;"></i> Revenue &amp; Collections Trend</h3>
-              <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0;">Historical monthly gross receipts from database payment ledger</p>
+              <h3 class="tile-title" style="margin: 0;"><i class="fa fa-line-chart" style="color: var(--color-primary); margin-right: 8px;"></i> Revenue &amp; Collections Trend</h3>
+              <p style="font-size: 12.5px; color: #94a3b8; margin: 3px 0 0;">Historical monthly gross receipts from database ledger</p>
             </div>
-            <span class="ios-badge ios-badge-success" style="font-size: 11.5px;"><i class="fa fa-circle" style="font-size: 8px; margin-right: 4px;"></i> Live Verified Ledger</span>
+            <span class="ios-badge ios-badge-success" style="font-size: 11px; padding: 4px 10px; border-radius: 20px;"><i class="fa fa-circle" style="font-size: 7px; margin-right: 5px;"></i> Live Verified Ledger</span>
           </div>
-          <div style="height: 260px; position: relative;">
+          <div style="height: 260px; position: relative; width: 100%; flex: 1;">
             <canvas id="revenueTrendChart"></canvas>
           </div>
         </div>
@@ -182,13 +185,20 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
 
       <!-- Right: Active Plan Breakdown -->
       <div class="col-lg-4">
-        <div class="tile" style="padding: 24px 28px; margin-bottom: 24px;">
-          <div style="margin-bottom: 20px;">
-            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-pie-chart" style="color: var(--color-accent); margin-right: 6px;"></i> Plan Distribution</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0;">Active pass breakdown by tier</p>
+        <div class="tile" style="min-height: 360px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 20px;">
+          <div style="margin-bottom: 16px;">
+            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-pie-chart" style="color: var(--color-accent); margin-right: 8px;"></i> Plan Distribution</h3>
+            <p style="font-size: 12.5px; color: #94a3b8; margin: 3px 0 0;">Active pass breakdown by tier</p>
           </div>
-          <div style="height: 260px; position: relative;">
-            <canvas id="planDistChart"></canvas>
+          <div style="height: 260px; position: relative; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center;">
+            <?php if (!empty($planDistData)): ?>
+              <canvas id="planDistChart"></canvas>
+            <?php else: ?>
+              <div style="text-align: center; color: #94a3b8;">
+                <i class="fa fa-pie-chart" style="font-size: 38px; margin-bottom: 10px; opacity: 0.35;"></i>
+                <p style="margin: 0; font-size: 13px;">No active subscriptions logged yet</p>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
       </div>
@@ -197,27 +207,27 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
     <!-- Quick Actions Panel -->
     <div class="row">
       <div class="col-12">
-        <div class="tile" style="padding: 24px 28px;">
-          <h3 class="tile-title" style="margin-bottom: 16px;">
-            <i class="fa fa-bolt" style="color: var(--color-primary); margin-right: 6px;"></i> Management Quick Actions
+        <div class="tile" style="margin-bottom: 20px; padding: 18px 24px;">
+          <h3 class="tile-title" style="margin-bottom: 14px;">
+            <i class="fa fa-bolt" style="color: var(--color-primary); margin-right: 8px;"></i> Management Quick Actions
           </h3>
-          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <a href="member-create.php" class="ios-btn ios-btn-primary">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="member-create.php" class="ios-btn ios-btn-primary" style="padding: 8px 16px; font-size: 13px; border-radius: 10px;">
               <i class="fa fa-user-plus"></i> Add New Member
             </a>
-            <a href="add-post.php" class="ios-btn ios-btn-glass">
+            <a href="add-post.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px; border-radius: 10px;">
               <i class="fa fa-plus-circle"></i> Create Membership Plan
             </a>
-            <a href="bookings.php?filter=unpaid" class="ios-btn ios-btn-accent">
+            <a href="bookings.php?filter=unpaid" class="ios-btn ios-btn-accent" style="padding: 8px 16px; font-size: 13px; border-radius: 10px;">
               <i class="fa fa-credit-card"></i> Process Payments
             </a>
-            <a href="website-branding.php" class="ios-btn ios-btn-glass">
+            <a href="website-branding.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px; border-radius: 10px;">
               <i class="fa fa-paint-brush"></i> Customize Branding
             </a>
-            <a href="theme-settings.php" class="ios-btn ios-btn-glass">
+            <a href="theme-settings.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px; border-radius: 10px;">
               <i class="fa fa-magic"></i> Theme &amp; Colors
             </a>
-            <a href="reports.php" class="ios-btn ios-btn-glass">
+            <a href="reports.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px; border-radius: 10px;">
               <i class="fa fa-bar-chart"></i> Reports &amp; Exports
             </a>
           </div>
@@ -229,20 +239,20 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
     <div class="row">
       <!-- Recent Payments -->
       <div class="col-lg-7">
-        <div class="tile">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-credit-card" style="color: var(--color-primary);"></i> Recent Payments</h3>
-            <a href="bookings.php" class="btn btn-sm btn-outline-light" style="border-radius: 10px;">View All</a>
+        <div class="tile" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-credit-card" style="color: var(--color-primary); margin-right: 8px;"></i> Recent Payments</h3>
+            <a href="bookings.php" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 12px; padding: 4px 12px;">View All</a>
           </div>
           <div class="table-responsive">
-            <table class="table table-hover table-bordered" style="margin: 0;">
+            <table class="table table-hover" style="margin: 0;">
               <thead>
                 <tr>
-                  <th>Member</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                  <th style="text-align: right;">Action</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Member</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Type</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Amount</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Date</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em; text-align: right;">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -250,18 +260,18 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
                 <tr>
                   <td><strong><?php echo htmlspecialchars($rp->fname . ' ' . $rp->lname, ENT_QUOTES, 'UTF-8'); ?></strong></td>
                   <td>
-                    <span class="ios-badge <?php echo ($rp->paymentType === 'Full Payment') ? 'ios-badge-success' : 'ios-badge-warning'; ?>">
+                    <span class="ios-badge <?php echo ($rp->paymentType === 'Full Payment') ? 'ios-badge-success' : 'ios-badge-warning'; ?>" style="font-size: 11px; padding: 3px 8px;">
                       <?php echo htmlspecialchars($rp->paymentType, ENT_QUOTES, 'UTF-8'); ?>
                     </span>
                   </td>
-                  <td style="font-weight: 700; color: #34d399;"><?php echo format_currency($rp->payment); ?></td>
-                  <td style="color: var(--text-secondary); font-size: 13px;"><?php echo date('d M Y, h:i A', strtotime($rp->payment_date)); ?></td>
+                  <td style="font-weight: 700; color: #10b981;"><?php echo format_currency($rp->payment); ?></td>
+                  <td style="color: #94a3b8; font-size: 12.5px;"><?php echo date('d M Y, h:i A', strtotime($rp->payment_date)); ?></td>
                   <td style="text-align: right;">
-                    <a href="booking-history-details.php?bookingid=<?php echo $rp->bookingID; ?>" class="btn btn-sm btn-primary" style="padding: 4px 10px; border-radius: 8px;">Receipt</a>
+                    <a href="booking-history-details.php?bookingid=<?php echo $rp->bookingID; ?>" class="btn btn-sm btn-primary" style="padding: 3px 10px; border-radius: 6px; font-size: 11.5px;">Receipt</a>
                   </td>
                 </tr>
                 <?php endforeach; else: ?>
-                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">No payment records logged.</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">No payment records logged.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>
@@ -271,18 +281,18 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
 
       <!-- Recent Members -->
       <div class="col-lg-5">
-        <div class="tile">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-user-plus" style="color: var(--color-primary);"></i> Recent Members</h3>
-            <a href="members.php" class="btn btn-sm btn-outline-light" style="border-radius: 10px;">Directory</a>
+        <div class="tile" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-user-plus" style="color: var(--color-primary); margin-right: 8px;"></i> Recent Members</h3>
+            <a href="members.php" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 12px; padding: 4px 12px;">Directory</a>
           </div>
           <div class="table-responsive">
-            <table class="table table-hover table-bordered" style="margin: 0;">
+            <table class="table table-hover" style="margin: 0;">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Joined</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Name</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Email</th>
+                  <th style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em;">Joined</th>
                 </tr>
               </thead>
               <tbody>
@@ -293,11 +303,11 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
                       <?php echo htmlspecialchars($rm->fname . ' ' . $rm->lname, ENT_QUOTES, 'UTF-8'); ?>
                     </a>
                   </td>
-                  <td style="color: var(--text-secondary); font-size: 13px;"><?php echo htmlspecialchars($rm->email, ENT_QUOTES, 'UTF-8'); ?></td>
-                  <td style="color: var(--text-muted); font-size: 12px;"><?php echo date('d M Y', strtotime($rm->create_date)); ?></td>
+                  <td style="color: #94a3b8; font-size: 12.5px;"><?php echo htmlspecialchars($rm->email, ENT_QUOTES, 'UTF-8'); ?></td>
+                  <td style="color: #64748b; font-size: 12px;"><?php echo date('d M Y', strtotime($rm->create_date)); ?></td>
                 </tr>
                 <?php endforeach; else: ?>
-                <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">No registered members found.</td></tr>
+                <tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 20px;">No registered members found.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>
@@ -313,95 +323,112 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
   <script src="js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    // 1. Monthly Revenue Trend Line/Bar Chart
-    const revCtx = document.getElementById('revenueTrendChart').getContext('2d');
-    const revGrad = revCtx.createLinearGradient(0, 0, 0, 260);
-    revGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
-    revGrad.addColorStop(1, 'rgba(56, 189, 248, 0.02)');
+    // 1. Monthly Revenue Trend Line Chart
+    const revCanvas = document.getElementById('revenueTrendChart');
+    if (revCanvas) {
+      const revCtx = revCanvas.getContext('2d');
+      const revGrad = revCtx.createLinearGradient(0, 0, 0, 260);
+      revGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+      revGrad.addColorStop(1, 'rgba(56, 189, 248, 0.01)');
 
-    new Chart(revCtx, {
-      type: 'line',
-      data: {
-        labels: <?php echo $chartLabels; ?>,
-        datasets: [{
-          label: 'Gross Collections (₹)',
-          data: <?php echo $chartRevenue; ?>,
-          borderColor: '#38bdf8',
-          borderWidth: 3,
-          backgroundColor: revGrad,
-          fill: true,
-          tension: 0.35,
-          pointBackgroundColor: '#ffffff',
-          pointBorderColor: '#38bdf8',
-          pointBorderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            titleColor: '#fff',
-            bodyColor: '#38bdf8',
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1,
-            padding: 12,
-            callbacks: {
-              label: (ctx) => ' Collections: ₹' + Number(ctx.raw).toLocaleString('en-IN')
-            }
-          }
+      new Chart(revCtx, {
+        type: 'line',
+        data: {
+          labels: <?php echo $chartLabels; ?>,
+          datasets: [{
+            label: 'Gross Collections (₹)',
+            data: <?php echo $chartRevenue; ?>,
+            borderColor: '#38bdf8',
+            borderWidth: 2.5,
+            backgroundColor: revGrad,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#38bdf8',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
         },
-        scales: {
-          x: {
-            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-            ticks: { color: '#94a3b8', font: { size: 12 } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#38bdf8',
+              borderColor: 'rgba(255, 255, 255, 0.12)',
+              borderWidth: 1,
+              cornerRadius: 10,
+              padding: 12,
+              callbacks: {
+                label: (ctx) => ' Collections: ₹' + Number(ctx.raw).toLocaleString('en-IN')
+              }
+            }
           },
-          y: {
-            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-            ticks: {
-              color: '#94a3b8',
-              font: { size: 12 },
-              callback: (v) => '₹' + v
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.04)' },
+              ticks: { color: '#94a3b8', font: { size: 11 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.04)' },
+              ticks: {
+                color: '#94a3b8',
+                font: { size: 11 },
+                callback: (v) => '₹' + v
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     // 2. Plan Distribution Donut Chart
-    const planCtx = document.getElementById('planDistChart').getContext('2d');
-    new Chart(planCtx, {
-      type: 'doughnut',
-      data: {
-        labels: <?php echo $planLabels; ?>,
-        datasets: [{
-          data: <?php echo $planCounts; ?>,
-          backgroundColor: [
-            'rgba(56, 189, 248, 0.85)',
-            'rgba(249, 115, 22, 0.85)',
-            'rgba(16, 185, 129, 0.85)',
-            'rgba(168, 85, 247, 0.85)'
-          ],
-          borderColor: '#181920',
-          borderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: '#cbd5e1', font: { size: 11 }, padding: 12 }
-          }
+    const planCanvas = document.getElementById('planDistChart');
+    if (planCanvas) {
+      const planCtx = planCanvas.getContext('2d');
+      new Chart(planCtx, {
+        type: 'doughnut',
+        data: {
+          labels: <?php echo $planLabels; ?>,
+          datasets: [{
+            data: <?php echo $planCounts; ?>,
+            backgroundColor: [
+              '#38bdf8',
+              '#f59e0b',
+              '#10b981',
+              '#a855f7',
+              '#ec4899',
+              '#6366f1'
+            ],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
         },
-        cutout: '68%'
-      }
-    });
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#cbd5e1',
+                font: { size: 11, weight: '500' },
+                padding: 14,
+                boxWidth: 12,
+                boxHeight: 12,
+                borderRadius: 3,
+                useBorderRadius: true
+              }
+            }
+          },
+          cutout: '70%'
+        }
+      });
+    }
   </script>
 </body>
 </html>

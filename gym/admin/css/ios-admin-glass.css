@@ -18,177 +18,397 @@ html, body.app, .app {
   right: 0;
   z-index: 1030;
   height: 64px;
-  background: rgba(15, 23, 42, 0.72) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
   backdrop-filter: blur(28px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 20px;
+}
+
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .app-header__logo {
   font-family: var(--font-family) !important;
-  font-size: 20px !important;
+  font-size: 17px !important;
   font-weight: 800 !important;
   letter-spacing: -0.02em !important;
   color: #fff !important;
   text-decoration: none !important;
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  align-items: center !important;
   gap: 10px;
   background: none !important;
+  padding: 0 !important;
+  line-height: normal !important;
+  min-width: 0;
 }
 
 .app-header__logo::before {
-  content: '⚡';
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
-  border-radius: 10px;
-  font-size: 16px;
-  box-shadow: 0 4px 12px var(--color-primary-glow);
+  display: none !important;
+}
+
+.app-header__logo-img {
+  max-height: 34px;
+  max-width: 140px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.app-header__logo-text {
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .app-sidebar__toggle {
-  color: var(--text-secondary) !important;
-  font-size: 20px;
-  padding: 8px 12px;
+  color: #94a3b8 !important;
+  font-size: 15px !important;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
-  background: none !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   text-decoration: none !important;
+  cursor: pointer;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.app-sidebar__toggle::before {
+  display: none !important;
 }
 
 .app-sidebar__toggle:hover {
   color: #fff !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.app-nav {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .app-nav__item {
-  color: var(--text-secondary) !important;
-  font-size: 14px !important;
+  color: #cbd5e1 !important;
+  font-size: 13.5px !important;
   font-weight: 600 !important;
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 16px !important;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: all 0.25s var(--ios-spring);
+  height: 36px;
+  padding: 0 14px !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s ease;
   text-decoration: none !important;
+  line-height: normal !important;
 }
 
 .app-nav__item:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   color: #fff !important;
-  border-color: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.app-nav__item-icon-only {
+  width: 36px;
+  padding: 0 !important;
 }
 
 .dropdown-menu {
-  background: rgba(15, 23, 42, 0.88) !important;
+  background: rgba(15, 23, 42, 0.95) !important;
   backdrop-filter: blur(28px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55) !important;
   padding: 8px !important;
-  margin-top: 8px !important;
+  margin-top: 6px !important;
 }
 
 .dropdown-item {
-  color: var(--text-secondary) !important;
-  font-size: 14px !important;
+  color: #cbd5e1 !important;
+  font-size: 13px !important;
   font-weight: 500;
-  border-radius: 12px;
-  padding: 10px 16px !important;
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 8px 14px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.18s ease;
 }
 
 .dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   color: #fff !important;
-  transform: translateX(3px);
+  transform: none !important;
 }
 
-/* Sidebar Dock */
+/* Sidebar Navigation */
 .app-sidebar {
   position: fixed;
   top: 64px;
   bottom: 0;
   left: 0;
   width: 250px;
-  padding-top: 20px;
-  background: rgba(10, 15, 29, 0.8) !important;
+  padding-top: 0;
+  background: rgba(10, 15, 29, 0.92) !important;
   backdrop-filter: blur(32px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(32px) saturate(190%) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35) !important;
   overflow-y: auto;
   z-index: 1020;
 }
 
+.sidebar-user {
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.sidebar-user__logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.sidebar-user__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+}
+
+.sidebar-user__info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sidebar-user__name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-user__tagline {
+  font-size: 10px;
+  color: var(--color-primary);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* Close button for mobile slideout */
+.app-sidebar__close {
+  display: none !important;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  padding: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.app-sidebar__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
 .app-menu {
-  padding: 0 12px;
+  padding: 0 10px;
   margin: 0;
 }
 
 .app-menu__item {
   display: flex !important;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: var(--text-secondary) !important;
-  border-radius: 16px !important;
+  gap: 10px;
+  padding: 9px 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  border-radius: 10px !important;
   border-left: none !important;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   text-decoration: none !important;
-  transition: all 0.25s var(--ios-spring) !important;
+  transition: all 0.2s ease !important;
+}
+
+.app-menu__icon {
+  width: 22px;
+  text-align: center;
+  font-size: 15px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+}
+
+.app-menu__label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.treeview-indicator {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: auto;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.treeview.is-expanded > .app-menu__item .treeview-indicator {
+  transform: rotate(90deg);
+  color: #fff;
 }
 
 .app-menu__item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   color: #fff !important;
-  transform: translateX(4px);
+  transform: none !important;
+}
+
+.app-menu__item:hover .app-menu__icon {
+  color: #fff;
 }
 
 .app-menu__item.active, .app-menu__item:focus {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%) !important;
-  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(99, 102, 241, 0.16) 100%) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
   color: #fff !important;
-  box-shadow: 0 8px 16px rgba(56, 189, 248, 0.15);
+  font-weight: 600 !important;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.12);
 }
 
+.app-menu__item.active .app-menu__icon {
+  color: var(--color-primary);
+}
+
+/* Treeview Submenus: zero height, zero padding, zero border when collapsed */
 .treeview-menu {
-  background: rgba(0, 0, 0, 0.2) !important;
-  border-radius: 14px;
-  padding: 6px !important;
-  margin: 4px 0 10px 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: none !important;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+.treeview.is-expanded > .treeview-menu {
+  display: block !important;
+  max-height: 500px !important;
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  padding: 4px 6px !important;
+  margin: 3px 4px 6px 14px !important;
 }
 
 .treeview-item {
-  color: var(--text-muted) !important;
-  font-size: 13px !important;
+  color: #94a3b8 !important;
+  font-size: 12.5px !important;
   font-weight: 500;
-  padding: 8px 14px !important;
-  border-radius: 10px;
-  display: block;
+  padding: 7px 10px !important;
+  border-radius: 8px;
+  display: flex !important;
+  align-items: center;
   text-decoration: none !important;
-  transition: all 0.2s ease;
+  margin-bottom: 2px !important;
+  transition: all 0.18s ease;
+}
+
+.treeview-item .icon {
+  width: 18px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #64748b;
+  margin-right: 8px;
+  flex-shrink: 0;
 }
 
 .treeview-item:hover {
   color: #fff !important;
   background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.treeview-item.active {
+  color: var(--color-primary) !important;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+.treeview-item.active .icon {
+  color: var(--color-primary) !important;
+}
+
+/* Collapsed Mini Sidebar Styles on Desktop */
+@media (min-width: 768px) {
+  .sidebar-mini.sidenav-toggled .sidebar-user {
+    justify-content: center !important;
+    padding: 14px 6px !important;
+  }
+  .sidebar-mini.sidenav-toggled .sidebar-user__info,
+  .sidebar-mini.sidenav-toggled .sidebar-user .app-sidebar__close {
+    display: none !important;
+  }
 }
 
 /* Main Content Area */
@@ -220,34 +440,41 @@ html, body.app, .app {
 }
 
 .app-title {
-  background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 20px !important;
-  padding: 20px 28px !important;
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4) !important;
-  margin-bottom: 30px !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  padding: 18px 24px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  margin-bottom: 20px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .app-title h1 {
-  font-size: 26px !important;
+  font-size: 22px !important;
   font-weight: 800 !important;
   color: #fff !important;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   margin: 0;
+  line-height: 1.2;
 }
 
 .app-title p {
-  color: var(--text-secondary) !important;
-  font-size: 14px;
+  color: #94a3b8 !important;
+  font-size: 13px;
   margin: 4px 0 0;
+  line-height: 1.4;
 }
 
 .app-breadcrumb {
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .breadcrumb-item a {
@@ -255,108 +482,117 @@ html, body.app, .app {
   font-weight: 600;
 }
 
+.breadcrumb-item.active {
+  color: #cbd5e1;
+}
+
 /* iOS Control Center Widget Cards */
 .widget-small {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
   backdrop-filter: blur(28px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 24px !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
-  padding: 22px 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+  padding: 16px 20px !important;
   display: flex !important;
   align-items: center !important;
-  gap: 20px !important;
-  transition: all 0.35s var(--ios-spring) !important;
-  margin-bottom: 24px !important;
+  gap: 16px !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+  margin-bottom: 20px !important;
   text-decoration: none !important;
   overflow: hidden;
   position: relative;
+  min-height: 94px;
 }
 
 .widget-small:hover {
-  transform: translateY(-6px) scale(1.02) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
-  box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.65) !important;
+  transform: translateY(-2px) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45) !important;
 }
 
 .widget-small .icon {
-  width: 60px !important;
-  height: 60px !important;
-  border-radius: 18px !important;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 12px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 26px !important;
+  font-size: 20px !important;
   padding: 0 !important;
   flex-shrink: 0;
 }
 
 .widget-small.primary .icon {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%) !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
-  color: #38bdf8 !important;
+  background: rgba(16, 185, 129, 0.14) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
 }
 
 .widget-small.info .icon {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(99, 102, 241, 0.25) 100%) !important;
-  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  background: rgba(139, 92, 246, 0.14) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
   color: #a78bfa !important;
 }
 
 .widget-small.warning .icon {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.25) 100%) !important;
-  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  background: rgba(245, 158, 11, 0.14) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
   color: #fbbf24 !important;
 }
 
 .widget-small.danger .icon {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.25) 100%) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
   color: #f87171 !important;
 }
 
 .widget-small .info {
   flex-grow: 1;
+  min-width: 0;
 }
 
 .widget-small .info h4 {
-  font-size: 13px !important;
+  font-size: 11.5px !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
-  color: var(--text-secondary) !important;
-  margin: 0 0 6px !important;
+  color: #94a3b8 !important;
+  margin: 0 0 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .widget-small .info p {
-  font-size: 34px !important;
+  font-size: 28px !important;
   font-weight: 800 !important;
   color: #fff !important;
-  letter-spacing: -0.04em !important;
-  line-height: 1 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.1 !important;
   margin: 0 !important;
 }
 
 /* Glass Panels & Tiles */
 .tile {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
   backdrop-filter: blur(28px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 24px !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
-  padding: 30px !important;
-  margin-bottom: 30px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+  padding: 22px 24px !important;
+  margin-bottom: 20px !important;
   color: #fff !important;
 }
 
 .tile-title {
-  font-size: 20px !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.02em;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
   color: #fff !important;
-  margin-bottom: 22px !important;
+  margin-bottom: 14px !important;
 }
 
 /* Glass Forms & Inputs */
@@ -534,19 +770,26 @@ html, body.app, .app {
   }
 
   .app-sidebar__toggle {
-    line-height: 56px !important;
-    padding: 0 10px !important;
+    width: 34px !important;
+    height: 34px !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+    font-size: 14px !important;
   }
 
   .app-header__logo {
-    font-size: 14px !important;
-    max-width: 145px !important;
+    font-size: 13.5px !important;
+    max-width: 150px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    padding: 0 4px !important;
+    padding: 0 !important;
     gap: 6px !important;
     flex: 0 1 auto !important;
+  }
+
+  .app-header__logo-text {
+    max-width: 105px !important;
   }
 
   .app-header__logo-img {
@@ -555,13 +798,19 @@ html, body.app, .app {
   }
 
   .app-nav {
-    gap: 4px !important;
+    gap: 6px !important;
     margin-left: auto !important;
   }
 
   .app-nav__item {
-    padding: 8px 10px !important;
-    font-size: 13px !important;
+    height: 34px !important;
+    padding: 0 10px !important;
+    font-size: 12.5px !important;
+  }
+
+  .app-nav__item-icon-only {
+    width: 34px !important;
+    padding: 0 !important;
   }
 
   /* Hide admin username text on mobile topbar to avoid crowding */
@@ -582,10 +831,19 @@ html, body.app, .app {
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     box-shadow: 20px 0 50px rgba(0, 0, 0, 0.8) !important;
     background: #0f172a !important;
+    padding-top: 8px !important;
   }
 
   .sidenav-toggled .app-sidebar {
     transform: translateX(0) !important;
+  }
+
+  .sidebar-user {
+    padding: 12px 14px !important;
+  }
+
+  .app-sidebar__close {
+    display: flex !important;
   }
 
   .app-sidebar__overlay {
