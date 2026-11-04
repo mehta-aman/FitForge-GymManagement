@@ -1,5 +1,9 @@
 <?php
-include  'include/config.php';
+require_once 'include/config.php';
+if (empty($_SESSION['adminid'])) {
+    http_response_code(403);
+    exit('Unauthorized');
+}
 if(!empty($_POST["category"])) 
 {
 $category=$_POST["category"];

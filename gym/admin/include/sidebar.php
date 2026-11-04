@@ -88,14 +88,18 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </li>
 
     <!-- 6. Reports & Analytics -->
-    <li class="treeview <?php echo in_array($currentPage, ['reports.php', 'report-booking.php', 'report-registration.php']) ? 'is-expanded' : ''; ?>">
+    <li class="treeview <?php echo in_array($currentPage, ['reports.php', 'report-expirations.php', 'report-dues.php', 'report-booking.php', 'report-registration.php']) ? 'is-expanded' : ''; ?>">
       <a class="app-menu__item" href="#" data-toggle="treeview">
         <i class="app-menu__icon fa fa-bar-chart"></i>
         <span class="app-menu__label">Reports</span>
         <i class="treeview-indicator fa fa-angle-right"></i>
       </a>
       <ul class="treeview-menu">
-        <li><a class="treeview-item <?php echo ($currentPage == 'reports.php') ? 'active' : ''; ?>" href="reports.php"><i class="icon fa fa-file-text-o"></i> Analytics &amp; Reports</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'reports.php') ? 'active' : ''; ?>" href="reports.php"><i class="icon fa fa-tachometer"></i> Reports Hub</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'report-expirations.php') ? 'active' : ''; ?>" href="report-expirations.php"><i class="icon fa fa-clock-o"></i> Expiring Passes</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'report-dues.php') ? 'active' : ''; ?>" href="report-dues.php"><i class="icon fa fa-money"></i> Outstanding Dues</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'report-booking.php') ? 'active' : ''; ?>" href="report-booking.php"><i class="icon fa fa-line-chart"></i> Sales &amp; Bookings</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'report-registration.php') ? 'active' : ''; ?>" href="report-registration.php"><i class="icon fa fa-user-plus"></i> Member Sign-ups</a></li>
       </ul>
     </li>
 

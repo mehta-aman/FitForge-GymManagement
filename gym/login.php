@@ -9,7 +9,11 @@ if (isset($_POST['submit'])) {
         $email = trim($_POST['email'] ?? '');
         $rawPassword = $_POST['password'] ?? '';
 
-        if ($email !== "" && $rawPassword !== "") {
+        // Check brute-force throttling
+        $throttle = check_login_throttle($email, $dbh);
+        if (!$throttle['allowed']) {
+            $msg = $throttle['message'];
+        } elseif ($email !== "" && $rawPassword !== "") {
             try {
                 $query = "SELECT id, fname, lname, email, mobile, password, address, status, create_date FROM tbluser WHERE email = :email";
                 $stmt = $dbh->prepare($query);
@@ -21,13 +25,17 @@ if (isset($_POST['submit'])) {
                     if (isset($row['status']) && $row['status'] === 'inactive') {
                         $msg = "Your account has been deactivated. Please contact gym administration.";
                     } else {
+                        clear_login_attempts($email, $dbh);
+                        regenerate_secure_session();
                         $_SESSION['uid']   = $row['id'];
                         $_SESSION['email'] = $row['email'];
                         $_SESSION['name']  = $row['fname'];
+                        $_SESSION['gym_id'] = $row['gym_id'] ?? 1;
                         header("location: index.php");
                         exit();
                     }
                 } else {
+                    record_failed_login($email, $dbh);
                     $msg = "Invalid email or password!";
                 }
             } catch (PDOException $e) {

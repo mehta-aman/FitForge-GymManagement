@@ -25,3 +25,11 @@ init_secure_session();
 
 // Preload settings into cache
 load_all_settings($dbh);
+
+// Tenant Context Helper (Foundational Multi-Gym Readiness)
+function get_current_gym_id() {
+    if (!empty($_SESSION['gym_id'])) {
+        return intval($_SESSION['gym_id']);
+    }
+    return 1; // Default tenant organization
+}

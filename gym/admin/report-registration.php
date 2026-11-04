@@ -5,11 +5,11 @@ if (empty($_SESSION['adminid'])) {
     exit();
 }
 
-$fdate = trim($_POST['fdate'] ?? date('Y-m-01'));
-$todate = trim($_POST['todate'] ?? date('Y-m-d'));
+$fdate = trim($_REQUEST['fdate'] ?? date('Y-m-01'));
+$todate = trim($_REQUEST['todate'] ?? date('Y-m-d'));
 $results = [];
 
-if (isset($_POST['Submit'])) {
+if (isset($_REQUEST['Submit']) || isset($_GET['export'])) {
     $sql = "SELECT id, fname, lname, email, mobile, city, state, status, create_date
             FROM tbluser
             WHERE DATE(create_date) BETWEEN :fdate AND :todate
@@ -17,6 +17,28 @@ if (isset($_POST['Submit'])) {
     $query = $dbh->prepare($sql);
     $query->execute([':fdate' => $fdate, ':todate' => $todate]);
     $results = $query->fetchAll(PDO::FETCH_OBJ);
+
+    if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=member_registrations_' . $fdate . '_to_' . $todate . '.csv');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['ID', 'First Name', 'Last Name', 'Email', 'Mobile', 'City', 'State', 'Status', 'Registered Date'], ',', '"', "\\");
+        foreach ($results as $r) {
+            fputcsv($out, [
+                $r->id,
+                $r->fname,
+                $r->lname,
+                $r->email,
+                $r->mobile,
+                $r->city,
+                $r->state,
+                $r->status,
+                $r->create_date
+            ], ',', '"', "\\");
+        }
+        fclose($out);
+        exit();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -69,16 +91,21 @@ if (isset($_POST['Submit'])) {
     </div>
 
     <!-- Results Table -->
-    <?php if (isset($_POST['Submit'])): ?>
+    <?php if (isset($_REQUEST['Submit'])): ?>
       <div class="tile">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
           <h3 style="font-size: 18px; font-weight: 700; margin: 0;">
             Sign-ups from <?php echo date('d M Y', strtotime($fdate)); ?> to <?php echo date('d M Y', strtotime($todate)); ?>
             <span class="ios-badge ios-badge-info" style="margin-left: 8px;"><?php echo count($results); ?> new members</span>
           </h3>
-          <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()" style="border-radius: 10px;">
-            <i class="fa fa-print"></i> Print Report
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <a href="report-registration.php?export=csv&fdate=<?php echo urlencode($fdate); ?>&todate=<?php echo urlencode($todate); ?>" class="btn btn-outline-success btn-sm" style="border-radius: 10px; font-weight: 600;">
+              <i class="fa fa-file-excel-o"></i> Export CSV
+            </a>
+            <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()" style="border-radius: 10px;">
+              <i class="fa fa-print"></i> Print Report
+            </button>
+          </div>
         </div>
 
         <div class="table-responsive">

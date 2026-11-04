@@ -9,21 +9,29 @@ if (isset($_POST['submit'])) {
         $email = trim($_POST['email'] ?? '');
         $rawPassword = $_POST['password'] ?? '';
 
-        if ($email !== "" && $rawPassword !== "") {
+        // Check brute-force throttling
+        $throttle = check_login_throttle($email, $dbh);
+        if (!$throttle['allowed']) {
+            $msg = $throttle['message'];
+        } elseif ($email !== "" && $rawPassword !== "") {
             try {
-                $query = "SELECT id, name, email, mobile, password, create_date FROM tbladmin WHERE email = :email";
+                $query = "SELECT id, name, email, mobile, password, create_date, gym_id FROM tbladmin WHERE email = :email";
                 $stmt = $dbh->prepare($query);
                 $stmt->bindParam(':email', $email, PDO::PARAM_STR);
                 $stmt->execute();
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($row && verify_and_rehash_password($rawPassword, $row['password'], 'tbladmin', 'id', $row['id'], $dbh)) {
+                    clear_login_attempts($email, $dbh);
+                    regenerate_secure_session();
                     $_SESSION['adminid'] = $row['id'];
                     $_SESSION['email']   = $row['email'];
                     $_SESSION['name']    = $row['name'];
+                    $_SESSION['gym_id']  = $row['gym_id'] ?? 1;
                     header("location: index.php");
                     exit();
                 } else {
+                    record_failed_login($email, $dbh);
                     $msg = "Invalid admin username or password!";
                 }
             } catch (PDOException $e) {
