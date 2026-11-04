@@ -109,6 +109,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Handle Freeze Membership
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'freeze_membership') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $err = "Security token mismatch. Please try again.";
+    } else {
+        $memId = intval($_POST['membership_id'] ?? 0);
+        $fStart = trim($_POST['freeze_start_date'] ?? date('Y-m-d'));
+        $fEnd = trim($_POST['freeze_end_date'] ?? '');
+        $fReason = trim($_POST['freeze_reason'] ?? 'Temporary Personal Suspension');
+        
+        $freezeStmt = $dbh->prepare("UPDATE tbl_memberships SET status = 'frozen', freeze_start_date = ?, freeze_end_date = ?, freeze_reason = ?, admin_notes = CONCAT(COALESCE(admin_notes, ''), '\n[Frozen on " . date('Y-m-d') . ": $fReason]') WHERE id = ? AND user_id = ?");
+        $freezeStmt->execute([$fStart, $fEnd ?: NULL, $fReason, $memId, $uid]);
+        $msg = "Membership has been frozen/suspended.";
+    }
+}
+
+// Handle Resume Membership (Auto-extends expiry by suspended duration)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'resume_membership') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $err = "Security token mismatch. Please try again.";
+    } else {
+        $memId = intval($_POST['membership_id'] ?? 0);
+        $curMem = $dbh->query("SELECT * FROM tbl_memberships WHERE id = $memId AND user_id = $uid")->fetch(PDO::FETCH_ASSOC);
+        if ($curMem && $curMem['status'] === 'frozen') {
+            $fStart = !empty($curMem['freeze_start_date']) ? strtotime($curMem['freeze_start_date']) : time();
+            $frozenDays = max(1, ceil((time() - $fStart) / 86400));
+            $newExpiry = date('Y-m-d', strtotime("+$frozenDays days", strtotime($curMem['expiry_date'])));
+            
+            $resumeStmt = $dbh->prepare("UPDATE tbl_memberships SET status = 'active', expiry_date = ?, freeze_start_date = NULL, freeze_end_date = NULL, freeze_reason = NULL, admin_notes = CONCAT(COALESCE(admin_notes, ''), '\n[Resumed on " . date('Y-m-d') . ". Extended by $frozenDays days to $newExpiry]') WHERE id = ? AND user_id = ?");
+            $resumeStmt->execute([$newExpiry, $memId, $uid]);
+            $msg = "Membership resumed successfully! Expiration date extended by $frozenDays days to " . date('d M Y', strtotime($newExpiry)) . ".";
+        }
+    }
+}
+
+// Handle Upgrade / Downgrade Membership Plan
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upgrade_membership') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $err = "Security token mismatch. Please try again.";
+    } else {
+        $memId = intval($_POST['membership_id'] ?? 0);
+        $newPlanId = intval($_POST['new_plan_id'] ?? 0);
+        $paidDiff = floatval($_POST['paid_difference'] ?? 0);
+        $payMethod = trim($_POST['payment_method'] ?? 'Cash');
+        $txnRef = trim($_POST['transaction_ref'] ?? '');
+        
+        $newPlan = $dbh->query("SELECT titlename, Price FROM tbladdpackage WHERE id = $newPlanId")->fetch(PDO::FETCH_ASSOC);
+        if ($newPlan) {
+            $newPrice = floatval($newPlan['Price']);
+            $upStmt = $dbh->prepare("UPDATE tbl_memberships SET plan_id = ?, total_amount = ?, paid_amount = paid_amount + ?, payment_status = IF((paid_amount + ?) >= ?, 'paid', 'partial'), admin_notes = CONCAT(COALESCE(admin_notes, ''), '\n[Upgraded to " . addslashes($newPlan['titlename']) . " on " . date('Y-m-d') . "]') WHERE id = ? AND user_id = ?");
+            $upStmt->execute([$newPlanId, $newPrice, $paidDiff, $paidDiff, $newPrice, $memId, $uid]);
+            
+            if ($paidDiff > 0) {
+                $bookingId = $dbh->query("SELECT booking_id FROM tbl_memberships WHERE id = $memId")->fetchColumn();
+                if ($bookingId) {
+                    $dbh->prepare("INSERT INTO tblpayment (bookingID, paymentType, payment, payment_method, transaction_ref) VALUES (?, ?, ?, ?, ?)")->execute([$bookingId, $payMethod, $paidDiff, $payMethod, $txnRef]);
+                }
+            }
+            $msg = "Membership upgraded to " . htmlspecialchars($newPlan['titlename']) . " successfully!";
+        }
+    }
+}
+
+// Handle Cancel Membership
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cancel_membership') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+        $err = "Security token mismatch. Please try again.";
+    } else {
+        $memId = intval($_POST['membership_id'] ?? 0);
+        $cancelReason = trim($_POST['cancel_reason'] ?? 'Member requested cancellation');
+        $cancelStmt = $dbh->prepare("UPDATE tbl_memberships SET status = 'cancelled', cancelled_at = NOW(), cancel_reason = ?, admin_notes = CONCAT(COALESCE(admin_notes, ''), '\n[Cancelled on " . date('Y-m-d') . ": $cancelReason]') WHERE id = ? AND user_id = ?");
+        $cancelStmt->execute([$cancelReason, $memId, $uid]);
+        $msg = "Membership cancelled successfully.";
+    }
+}
+
 // Fetch member details
 $userStmt = $dbh->prepare("SELECT * FROM tbluser WHERE id = ?");
 $userStmt->execute([$uid]);
@@ -127,10 +203,10 @@ $memHistoryStmt = $dbh->prepare("SELECT m.*, p.titlename, p.PackageDuratiobn, c.
 $memHistoryStmt->execute([$uid]);
 $membershipHistory = $memHistoryStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Find current active membership (if any)
+// Find current active or frozen membership (if any)
 $currentMembership = null;
 foreach ($membershipHistory as $mem) {
-    if ($mem['status'] === 'active' && $mem['expiry_date'] >= date('Y-m-d')) {
+    if (in_array($mem['status'], ['active', 'frozen']) && ($mem['expiry_date'] >= date('Y-m-d') || $mem['status'] === 'frozen')) {
         $currentMembership = $mem;
         break;
     }
@@ -258,7 +334,11 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="tile" style="position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(56, 189, 248, 0.08) 100%);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 18px;">
             <div>
-              <span class="ios-badge ios-badge-info" style="margin-bottom: 8px;">CURRENT MEMBERSHIP</span>
+              <?php if ($currentMembership && $currentMembership['status'] === 'frozen'): ?>
+                <span class="ios-badge ios-badge-warning" style="margin-bottom: 8px;"><i class="fa fa-pause-circle"></i> MEMBERSHIP SUSPENDED / FROZEN</span>
+              <?php else: ?>
+                <span class="ios-badge ios-badge-info" style="margin-bottom: 8px;">CURRENT MEMBERSHIP</span>
+              <?php endif; ?>
               <h2 style="font-size: 24px; font-weight: 800; margin: 4px 0;">
                 <?php echo $currentMembership ? htmlspecialchars($currentMembership['titlename']) : 'No Active Membership'; ?>
               </h2>
@@ -266,14 +346,34 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
                 <p style="color: var(--text-secondary); margin: 0; font-size: 13.5px;">
                   Category: <strong><?php echo htmlspecialchars($currentMembership['category_name'] ?? 'General'); ?></strong> &bull;
                   Period: <?php echo date('d M Y', strtotime($currentMembership['start_date'])); ?> &rarr; <?php echo date('d M Y', strtotime($currentMembership['expiry_date'])); ?>
+                  <?php if (!empty($currentMembership['freeze_reason'])): ?>
+                    <br><small style="color: #fbbf24;"><i class="fa fa-info-circle"></i> Freeze Reason: <?php echo htmlspecialchars($currentMembership['freeze_reason']); ?> (Frozen since <?php echo date('d M Y', strtotime($currentMembership['freeze_start_date'])); ?>)</small>
+                  <?php endif; ?>
                 </p>
               <?php else: ?>
                 <p style="color: var(--text-muted); margin: 0; font-size: 13.5px;">This member does not have an active package. Assign or renew a plan below.</p>
               <?php endif; ?>
             </div>
-            <div>
-              <button type="button" class="ios-btn ios-btn-accent" style="padding: 10px 18px; border-radius: 14px;" data-toggle="modal" data-target="#assignModal">
-                <i class="fa fa-refresh"></i> Assign / Renew Plan
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <?php if ($currentMembership): ?>
+                <?php if ($currentMembership['status'] === 'frozen'): ?>
+                  <button type="button" class="btn btn-success" data-toggle="modal" data-target="#resumeModal" style="border-radius: 12px; font-weight: 600;">
+                    <i class="fa fa-play"></i> Resume Pass
+                  </button>
+                <?php else: ?>
+                  <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#freezeModal" style="border-radius: 12px; color: #000; font-weight: 600;">
+                    <i class="fa fa-pause"></i> Freeze Pass
+                  </button>
+                  <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#upgradeModal" style="border-radius: 12px;">
+                    <i class="fa fa-level-up"></i> Upgrade Plan
+                  </button>
+                <?php endif; ?>
+                <button type="button" class="btn btn-outline-danger" data-toggle="modal" data-target="#cancelModal" style="border-radius: 12px;">
+                  <i class="fa fa-times"></i> Cancel
+                </button>
+              <?php endif; ?>
+              <button type="button" class="btn btn-primary" style="border-radius: 12px;" data-toggle="modal" data-target="#assignModal">
+                <i class="fa fa-refresh"></i> <?php echo $currentMembership ? 'Renew / Extend' : 'Assign Plan'; ?>
               </button>
             </div>
           </div>
@@ -478,6 +578,218 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
               <i class="fa fa-check"></i> Confirm & Assign
             </button>
           </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <?php if ($currentMembership): ?>
+    <!-- Modal: Freeze Membership -->
+    <div class="modal fade" id="freezeModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="background: rgba(18, 24, 38, 0.95); backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: 24px; color: #fff;">
+          <form method="post">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="freeze_membership">
+            <input type="hidden" name="membership_id" value="<?php echo $currentMembership['id']; ?>">
+            
+            <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding: 20px 24px;">
+              <h5 class="modal-title" style="font-weight: 700; font-size: 18px; color: #fbbf24;">
+                <i class="fa fa-pause-circle" style="margin-right: 6px;"></i> Freeze / Suspend Membership Pass
+              </h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.8;">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+              <div class="alert alert-warning" style="background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 14px; font-size: 13px; color: #fef3c7;">
+                <i class="fa fa-info-circle"></i> Freezing halts member facility access. Upon resuming, the expiration date is automatically extended by the exact number of suspended days.
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group">
+                  <label style="font-weight: 600; font-size: 13px;">Freeze Start Date *</label>
+                  <input type="date" name="freeze_start_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required style="border-radius: 12px;">
+                </div>
+                <div class="col-md-6 form-group">
+                  <label style="font-weight: 600; font-size: 13px;">Expected End Date</label>
+                  <input type="date" name="freeze_end_date" class="form-control" style="border-radius: 12px;">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">Reason for Suspension *</label>
+                <select name="freeze_reason" class="form-control" style="border-radius: 12px;">
+                  <option value="Personal Travel / Vacation">Personal Travel / Vacation</option>
+                  <option value="Medical / Health Injury">Medical / Health Injury</option>
+                  <option value="Work / Academic Schedule">Work / Academic Schedule</option>
+                  <option value="Temporary Financial Break">Temporary Financial Break</option>
+                  <option value="Other Administrative Reason">Other Administrative Reason</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="modal-footer" style="border-top: 1px solid var(--glass-border); padding: 16px 24px;">
+              <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 12px;">Cancel</button>
+              <button type="submit" class="btn btn-warning" style="border-radius: 12px; color: #000; font-weight: 700;">
+                <i class="fa fa-pause"></i> Confirm Freeze
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Resume Membership -->
+    <div class="modal fade" id="resumeModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="background: rgba(18, 24, 38, 0.95); backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: 24px; color: #fff;">
+          <form method="post">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="resume_membership">
+            <input type="hidden" name="membership_id" value="<?php echo $currentMembership['id']; ?>">
+            
+            <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding: 20px 24px;">
+              <h5 class="modal-title" style="font-weight: 700; font-size: 18px; color: #34d399;">
+                <i class="fa fa-play-circle" style="margin-right: 6px;"></i> Resume Membership Pass
+              </h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.8;">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+              <p style="font-size: 14.5px; color: #e2e8f0; margin-bottom: 16px;">
+                Are you ready to reactivate gym access for <strong><?php echo htmlspecialchars($user['fname'] . ' ' . $user['lname']); ?></strong>?
+              </p>
+              <div class="alert alert-success" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 14px; font-size: 13.5px; color: #d1fae5;">
+                <i class="fa fa-check-circle"></i> The system will automatically calculate the days spent frozen and push forward the expiration date accordingly.
+              </div>
+            </div>
+
+            <div class="modal-footer" style="border-top: 1px solid var(--glass-border); padding: 16px 24px;">
+              <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 12px;">Cancel</button>
+              <button type="submit" class="btn btn-success" style="border-radius: 12px; font-weight: 700;">
+                <i class="fa fa-play"></i> Confirm Resume
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Upgrade / Downgrade Membership Plan -->
+    <div class="modal fade" id="upgradeModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="background: rgba(18, 24, 38, 0.95); backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: 24px; color: #fff;">
+          <form method="post">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="upgrade_membership">
+            <input type="hidden" name="membership_id" value="<?php echo $currentMembership['id']; ?>">
+            
+            <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding: 20px 24px;">
+              <h5 class="modal-title" style="font-weight: 700; font-size: 18px; color: var(--color-primary);">
+                <i class="fa fa-level-up" style="margin-right: 6px;"></i> Upgrade / Change Membership Plan
+              </h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.8;">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">Current Plan</label>
+                <input type="text" class="form-control" readonly value="<?php echo htmlspecialchars($currentMembership['titlename']); ?> (<?php echo format_currency($currentMembership['total_amount']); ?>)" style="border-radius: 12px; opacity: 0.7;">
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">New Target Plan *</label>
+                <select name="new_plan_id" class="form-control" required style="border-radius: 12px;">
+                  <option value="" disabled selected>-- Select upgrade package --</option>
+                  <?php foreach ($plans as $p): ?>
+                    <?php if ($p['id'] != $currentMembership['plan_id']): ?>
+                      <option value="<?php echo $p['id']; ?>">
+                        <?php echo htmlspecialchars($p['titlename']); ?> &bull; <?php echo format_currency($p['Price']); ?> (<?php echo htmlspecialchars($p['PackageDuratiobn'] ?? '1 Month'); ?>)
+                      </option>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 form-group">
+                  <label style="font-weight: 600; font-size: 13px;">Upgrade Payment (<?php echo get_currency_symbol(); ?>)</label>
+                  <input type="number" step="0.01" name="paid_difference" class="form-control" placeholder="0.00" style="border-radius: 12px;">
+                </div>
+                <div class="col-md-6 form-group">
+                  <label style="font-weight: 600; font-size: 13px;">Payment Method</label>
+                  <select name="payment_method" class="form-control" style="border-radius: 12px;">
+                    <option value="Cash">Cash</option>
+                    <option value="UPI / QR">UPI / QR</option>
+                    <option value="Card">Card / POS</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">Transaction Reference</label>
+                <input type="text" name="transaction_ref" class="form-control" placeholder="Optional transaction ID..." style="border-radius: 12px;">
+              </div>
+            </div>
+
+            <div class="modal-footer" style="border-top: 1px solid var(--glass-border); padding: 16px 24px;">
+              <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 12px;">Cancel</button>
+              <button type="submit" class="btn btn-primary" style="border-radius: 12px;">
+                <i class="fa fa-level-up"></i> Confirm Upgrade
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Cancel Membership -->
+    <div class="modal fade" id="cancelModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="background: rgba(18, 24, 38, 0.95); backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: 24px; color: #fff;">
+          <form method="post">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="cancel_membership">
+            <input type="hidden" name="membership_id" value="<?php echo $currentMembership['id']; ?>">
+            
+            <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding: 20px 24px;">
+              <h5 class="modal-title" style="font-weight: 700; font-size: 18px; color: #ef4444;">
+                <i class="fa fa-exclamation-triangle" style="margin-right: 6px;"></i> Cancel Active Membership
+              </h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.8;">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+              <div class="alert alert-danger" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 14px; font-size: 13.5px; color: #fee2e2;">
+                <strong>Warning:</strong> Cancelling immediately terminates facility privileges for this pass. Previous payment records remain intact in the ledger.
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">Reason for Cancellation *</label>
+                <textarea name="cancel_reason" class="form-control" rows="3" required placeholder="Provide reason for member pass termination..." style="border-radius: 12px;"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer" style="border-top: 1px solid var(--glass-border); padding: 16px 24px;">
+              <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 12px;">Close</button>
+              <button type="submit" class="btn btn-danger" style="border-radius: 12px; font-weight: 700;">
+                <i class="fa fa-times"></i> Cancel Membership
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
         </form>
       </div>
     </div>

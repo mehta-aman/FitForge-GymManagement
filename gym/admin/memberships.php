@@ -50,7 +50,9 @@ if ($tab === 'active') {
 } elseif ($tab === 'expiring') {
     $where[] = "m.status = 'active' AND m.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 14 DAY)";
 } elseif ($tab === 'expired') {
-    $where[] = "(m.status = 'expired' OR m.expiry_date < CURDATE())";
+    $where[] = "(m.status = 'expired' OR (m.status != 'frozen' AND m.status != 'cancelled' AND m.expiry_date < CURDATE()))";
+} elseif ($tab === 'frozen') {
+    $where[] = "m.status = 'frozen'";
 } elseif ($tab === 'cancelled') {
     $where[] = "m.status = 'cancelled'";
 }
@@ -82,7 +84,9 @@ $memberships = $queryStmt->fetchAll(PDO::FETCH_ASSOC);
 // Counts for tabs
 $activeCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status = 'active' AND expiry_date >= CURDATE()")->fetchColumn();
 $expiringCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status = 'active' AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 14 DAY)")->fetchColumn();
-$expiredCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status = 'expired' OR expiry_date < CURDATE()")->fetchColumn();
+$frozenCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status = 'frozen'")->fetchColumn();
+$expiredCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status = 'expired' OR (status NOT IN ('frozen', 'cancelled') AND expiry_date < CURDATE())")->fetchColumn();
+$cancelledCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status = 'cancelled'")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,8 +128,14 @@ $expiredCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status =
       <a href="memberships.php?tab=expiring" class="btn <?php echo ($tab === 'expiring') ? 'btn-primary' : 'btn-outline-light'; ?>" style="border-radius: 12px; font-size: 13.5px; padding: 8px 16px;">
         <i class="fa fa-clock-o text-warning"></i> Expiring in 14d (<?php echo $expiringCount; ?>)
       </a>
+      <a href="memberships.php?tab=frozen" class="btn <?php echo ($tab === 'frozen') ? 'btn-primary' : 'btn-outline-light'; ?>" style="border-radius: 12px; font-size: 13.5px; padding: 8px 16px;">
+        <i class="fa fa-pause-circle text-warning"></i> Frozen (<?php echo $frozenCount; ?>)
+      </a>
       <a href="memberships.php?tab=expired" class="btn <?php echo ($tab === 'expired') ? 'btn-primary' : 'btn-outline-light'; ?>" style="border-radius: 12px; font-size: 13.5px; padding: 8px 16px;">
         <i class="fa fa-times-circle text-danger"></i> Expired (<?php echo $expiredCount; ?>)
+      </a>
+      <a href="memberships.php?tab=cancelled" class="btn <?php echo ($tab === 'cancelled') ? 'btn-primary' : 'btn-outline-light'; ?>" style="border-radius: 12px; font-size: 13.5px; padding: 8px 16px;">
+        <i class="fa fa-ban" style="color: #94a3b8;"></i> Cancelled (<?php echo $cancelledCount; ?>)
       </a>
     </div>
 
@@ -192,7 +202,11 @@ $expiredCount = $dbh->query("SELECT count(*) FROM tbl_memberships WHERE status =
                 <?php echo date('d M Y', strtotime($m['start_date'])); ?> &rarr; <?php echo date('d M Y', strtotime($m['expiry_date'])); ?>
               </td>
               <td>
-                <?php if ($m['expiry_date'] < date('Y-m-d')): ?>
+                <?php if ($m['status'] === 'frozen'): ?>
+                  <span class="ios-badge ios-badge-warning"><i class="fa fa-pause"></i> Frozen</span>
+                <?php elseif ($m['status'] === 'cancelled'): ?>
+                  <span class="ios-badge ios-badge-danger">Cancelled</span>
+                <?php elseif ($m['expiry_date'] < date('Y-m-d')): ?>
                   <span class="ios-badge ios-badge-danger">Expired</span>
                 <?php elseif ($days <= 7): ?>
                   <span class="ios-badge ios-badge-warning"><?php echo $days; ?> Days Left</span>
