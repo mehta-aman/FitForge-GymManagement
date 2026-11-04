@@ -95,9 +95,14 @@ if(strlen($_SESSION["uid"]) == 0) {
 									<span style="color: var(--text-secondary);"><?php echo htmlentities($result->PackageName);?></span>
 								</td>
 								<td style="text-align: right;">
-									<a href="booking-details.php?bookingid=<?php echo htmlentities($result->bookingid);?>" class="ios-btn ios-btn-primary" style="padding: 6px 14px; font-size: 13px; border-radius: 12px;">
-										<i class="fa fa-eye"></i> Receipt
-									</a>
+									<div style="display: inline-flex; gap: 6px;">
+										<a href="receipt.php?bookingid=<?php echo htmlentities($result->bookingid);?>" target="_blank" class="ios-btn ios-btn-glass" style="padding: 6px 12px; font-size: 13px; border-radius: 12px;" title="Print Official Receipt">
+											<i class="fa fa-print"></i>
+										</a>
+										<a href="booking-details.php?bookingid=<?php echo htmlentities($result->bookingid);?>" class="ios-btn ios-btn-primary" style="padding: 6px 14px; font-size: 13px; border-radius: 12px;">
+											<i class="fa fa-file-text-o"></i> Details
+										</a>
+									</div>
 								</td>
 							</tr>
 							<?php 

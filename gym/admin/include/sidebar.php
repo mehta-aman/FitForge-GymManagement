@@ -33,8 +33,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       </a>
     </li>
 
-    <!-- 2. Members & Memberships -->
-    <li class="treeview <?php echo in_array($currentPage, ['members.php', 'member-profile.php', 'member-create.php', 'memberships.php']) ? 'is-expanded' : ''; ?>">
+    <!-- 2. Attendance & QR Check-in -->
+    <li>
+      <a class="app-menu__item <?php echo ($currentPage == 'attendance.php') ? 'active' : ''; ?>" href="attendance.php">
+        <i class="app-menu__icon fa fa-qrcode" style="color: #10b981;"></i>
+        <span class="app-menu__label">Attendance &amp; Floor</span>
+      </a>
+    </li>
+
+    <!-- 3. Members & Memberships -->
+    <li class="treeview <?php echo in_array($currentPage, ['members.php', 'member-profile.php', 'member-create.php', 'memberships.php', 'trainers.php']) ? 'is-expanded' : ''; ?>">
       <a class="app-menu__item" href="#" data-toggle="treeview">
         <i class="app-menu__icon fa fa-users"></i>
         <span class="app-menu__label">Members &amp; Subs</span>
@@ -44,6 +52,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <li><a class="treeview-item <?php echo ($currentPage == 'members.php') ? 'active' : ''; ?>" href="members.php"><i class="icon fa fa-address-book-o"></i> Member Directory</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'member-create.php') ? 'active' : ''; ?>" href="member-create.php"><i class="icon fa fa-user-plus"></i> Add New Member</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'memberships.php') ? 'active' : ''; ?>" href="memberships.php"><i class="icon fa fa-id-card-o"></i> All Memberships</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'trainers.php') ? 'active' : ''; ?>" href="trainers.php"><i class="icon fa fa-user-secret"></i> Trainers &amp; Coaching</a></li>
       </ul>
     </li>
 
@@ -117,7 +126,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </li>
 
     <!-- 8. Settings & Themes -->
-    <li class="treeview <?php echo in_array($currentPage, ['settings.php', 'theme-settings.php', 'change-password.php', 'profile.php']) ? 'is-expanded' : ''; ?>">
+    <li class="treeview <?php echo in_array($currentPage, ['settings.php', 'theme-settings.php', 'notifications-hub.php', 'change-password.php', 'profile.php']) ? 'is-expanded' : ''; ?>">
       <a class="app-menu__item" href="#" data-toggle="treeview">
         <i class="app-menu__icon fa fa-cogs"></i>
         <span class="app-menu__label">Settings</span>
@@ -125,6 +134,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       </a>
       <ul class="treeview-menu">
         <li><a class="treeview-item <?php echo ($currentPage == 'settings.php') ? 'active' : ''; ?>" href="settings.php"><i class="icon fa fa-sliders"></i> System Settings</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'notifications-hub.php') ? 'active' : ''; ?>" href="notifications-hub.php"><i class="icon fa fa-whatsapp"></i> Alerts &amp; WhatsApp</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'theme-settings.php') ? 'active' : ''; ?>" href="theme-settings.php"><i class="icon fa fa-magic"></i> Theme &amp; Appearance</a></li>
         <li><a class="treeview-item <?php echo ($currentPage == 'profile.php') ? 'active' : ''; ?>" href="profile.php"><i class="icon fa fa-user"></i> Admin Profile</a></li>
       </ul>

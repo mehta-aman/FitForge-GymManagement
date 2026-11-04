@@ -122,6 +122,63 @@ button.btn-primary {
   </a>
 
   <ul class="app-nav" style="margin: 0; padding: 0; display: flex; align-items: center; gap: 10px;">
+    <?php
+    $topExpiring = isset($dbh) ? intval($dbh->query("SELECT count(*) FROM tbl_memberships WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)")->fetchColumn()) : 0;
+    $topDues = isset($dbh) ? intval($dbh->query("SELECT count(DISTINCT b.id) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) < (CAST(p.Price AS DECIMAL(10,2)) + CAST(COALESCE(p.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(p.discount,0) AS DECIMAL(10,2)))")->fetchColumn()) : 0;
+    $topFloor = isset($dbh) ? intval($dbh->query("SELECT count(*) FROM tbl_attendance WHERE DATE(check_in_time) = CURDATE() AND check_out_time IS NULL")->fetchColumn()) : 0;
+    $totalTopAlerts = $topExpiring + $topDues;
+    ?>
+    <!-- Live Floor Pill -->
+    <li class="d-none d-md-block">
+      <a href="attendance.php" class="app-nav__item" style="padding: 6px 14px; border-radius: 20px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); font-size: 12px; color: #34d399; font-weight: 700; text-decoration: none;">
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 6px; box-shadow: 0 0 8px #10b981;"></span>
+        <?php echo $topFloor; ?> On Floor
+      </a>
+    </li>
+
+    <!-- Notification Bell Dropdown -->
+    <li class="dropdown">
+      <a class="app-nav__item" href="#" data-toggle="dropdown" aria-label="Show Notifications" style="position: relative;">
+        <i class="fa fa-bell-o" style="font-size: 16px;"></i>
+        <?php if ($totalTopAlerts > 0): ?>
+          <span style="position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 6px #ef4444;"></span>
+        <?php endif; ?>
+      </a>
+      <ul class="dropdown-menu settings-menu dropdown-menu-right" style="min-width: 280px; padding: 12px; background: #181920; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px;">
+        <li style="padding: 6px 10px; font-weight: 700; color: #fff; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between;">
+          <span>Operational Alerts</span>
+          <span class="ios-badge ios-badge-danger" style="font-size: 10px;"><?php echo $totalTopAlerts; ?> Pending</span>
+        </li>
+        <li style="margin-top: 6px;">
+          <a class="dropdown-item" href="report-expirations.php?range=7" style="border-radius: 8px; font-size: 12.5px; padding: 8px 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa fa-clock-o text-warning" style="font-size: 16px;"></i>
+            <div>
+              <div style="font-weight: 600; color: #fff;"><?php echo $topExpiring; ?> Expiring Soon (7d)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Send WhatsApp renewals</div>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="report-dues.php" style="border-radius: 8px; font-size: 12.5px; padding: 8px 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa fa-money text-danger" style="font-size: 16px;"></i>
+            <div>
+              <div style="font-weight: 600; color: #fff;"><?php echo $topDues; ?> Dues Pending</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Collect member balances</div>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="attendance.php" style="border-radius: 8px; font-size: 12.5px; padding: 8px 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa fa-qrcode text-success" style="font-size: 16px;"></i>
+            <div>
+              <div style="font-weight: 600; color: #fff;">Attendance Check-in</div>
+              <div style="font-size: 11px; color: var(--text-muted);"><?php echo $topFloor; ?> currently training</div>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
     <li class="dropdown">
       <a class="app-nav__item" href="#" data-toggle="dropdown" aria-label="Open Profile Menu">
         <i class="fa fa-shield" style="color: var(--color-primary);"></i>

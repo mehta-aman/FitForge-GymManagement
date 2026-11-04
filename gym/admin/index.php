@@ -25,6 +25,28 @@ $recentPayments = $dbh->query("SELECT p.id, p.payment, p.paymentType, p.payment_
 
 // 4. Recent Member Registrations
 $recentMembers = $dbh->query("SELECT id, fname, lname, email, mobile, create_date, status FROM tbluser ORDER BY id DESC LIMIT 5")->fetchAll(PDO::FETCH_OBJ);
+
+// 5. Interactive Chart Data (Real Database Aggregations)
+$monthlyRevenueData = $dbh->query("
+    SELECT DATE_FORMAT(payment_date, '%b %Y') as m_label, SUM(payment) as m_revenue
+    FROM tblpayment
+    GROUP BY DATE_FORMAT(payment_date, '%Y-%m'), m_label
+    ORDER BY DATE_FORMAT(payment_date, '%Y-%m') ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$chartLabels = json_encode(array_column($monthlyRevenueData, 'm_label'));
+$chartRevenue = json_encode(array_map('floatval', array_column($monthlyRevenueData, 'm_revenue')));
+
+$planDistData = $dbh->query("
+    SELECT p.titlename, count(m.id) as cnt
+    FROM tbl_memberships m
+    JOIN tbladdpackage p ON m.plan_id = p.id
+    GROUP BY p.id, p.titlename
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$planLabels = json_encode(array_column($planDistData, 'titlename'));
+$planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -135,6 +157,38 @@ $recentMembers = $dbh->query("SELECT id, fname, lname, email, mobile, create_dat
             <div class="ios-auth-icon" style="margin: 0; width: 56px; height: 56px; font-size: 24px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">
               <i class="fa fa-hourglass-half"></i>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-Data Analytics & Growth Charts -->
+    <div class="row">
+      <!-- Left: Revenue Growth Trend -->
+      <div class="col-lg-8">
+        <div class="tile" style="padding: 24px 28px; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 class="tile-title" style="margin: 0;"><i class="fa fa-line-chart" style="color: var(--color-primary); margin-right: 6px;"></i> Revenue &amp; Collections Trend</h3>
+              <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0;">Historical monthly gross receipts from database payment ledger</p>
+            </div>
+            <span class="ios-badge ios-badge-success" style="font-size: 11.5px;"><i class="fa fa-circle" style="font-size: 8px; margin-right: 4px;"></i> Live Verified Ledger</span>
+          </div>
+          <div style="height: 260px; position: relative;">
+            <canvas id="revenueTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Active Plan Breakdown -->
+      <div class="col-lg-4">
+        <div class="tile" style="padding: 24px 28px; margin-bottom: 24px;">
+          <div style="margin-bottom: 20px;">
+            <h3 class="tile-title" style="margin: 0;"><i class="fa fa-pie-chart" style="color: var(--color-accent); margin-right: 6px;"></i> Plan Distribution</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0;">Active pass breakdown by tier</p>
+          </div>
+          <div style="height: 260px; position: relative;">
+            <canvas id="planDistChart"></canvas>
           </div>
         </div>
       </div>
@@ -257,5 +311,97 @@ $recentMembers = $dbh->query("SELECT id, fname, lname, email, mobile, create_dat
   <script src="js/popper.min.js"></script>
   <script src="js/bootstrap.min.js"></script>
   <script src="js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // 1. Monthly Revenue Trend Line/Bar Chart
+    const revCtx = document.getElementById('revenueTrendChart').getContext('2d');
+    const revGrad = revCtx.createLinearGradient(0, 0, 0, 260);
+    revGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+    revGrad.addColorStop(1, 'rgba(56, 189, 248, 0.02)');
+
+    new Chart(revCtx, {
+      type: 'line',
+      data: {
+        labels: <?php echo $chartLabels; ?>,
+        datasets: [{
+          label: 'Gross Collections (₹)',
+          data: <?php echo $chartRevenue; ?>,
+          borderColor: '#38bdf8',
+          borderWidth: 3,
+          backgroundColor: revGrad,
+          fill: true,
+          tension: 0.35,
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: '#38bdf8',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#fff',
+            bodyColor: '#38bdf8',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: {
+              label: (ctx) => ' Collections: ₹' + Number(ctx.raw).toLocaleString('en-IN')
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8', font: { size: 12 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 12 },
+              callback: (v) => '₹' + v
+            }
+          }
+        }
+      }
+    });
+
+    // 2. Plan Distribution Donut Chart
+    const planCtx = document.getElementById('planDistChart').getContext('2d');
+    new Chart(planCtx, {
+      type: 'doughnut',
+      data: {
+        labels: <?php echo $planLabels; ?>,
+        datasets: [{
+          data: <?php echo $planCounts; ?>,
+          backgroundColor: [
+            'rgba(56, 189, 248, 0.85)',
+            'rgba(249, 115, 22, 0.85)',
+            'rgba(16, 185, 129, 0.85)',
+            'rgba(168, 85, 247, 0.85)'
+          ],
+          borderColor: '#181920',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#cbd5e1', font: { size: 11 }, padding: 12 }
+          }
+        },
+        cutout: '68%'
+      }
+    });
+  </script>
 </body>
 </html>
