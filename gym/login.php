@@ -2,7 +2,7 @@
 require_once 'include/config.php';
 $msg = ""; 
 
-if (isset($_POST['submit'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $msg = "Security token mismatch. Please try again.";
     } else {
@@ -112,6 +112,7 @@ if (isset($_POST['submit'])) {
 	</div>
 
 	<script src="js/vendor/jquery-3.2.1.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
 	<script src="js/bootstrap.min.js"></script>
 </body>
 </html>

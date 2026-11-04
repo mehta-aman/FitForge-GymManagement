@@ -1,6 +1,7 @@
 <?php
 require_once 'include/config.php';
 require_once 'include/fitness_metrics.php';
+require_once 'include/exercise_catalog.php';
 
 if (empty($_SESSION['uid'])) {
     header('location:login.php');
@@ -500,6 +501,10 @@ $activeWorkoutDaysCount = count(array_filter($weeklyWorkouts, fn($dayArr) => !em
 $todayDayOfWeek = date('l');
 $todayExercises = $weeklyWorkouts[$todayDayOfWeek] ?? [];
 
+$masterExercises = get_master_exercise_catalog();
+$exerciseCategories = get_exercise_categories();
+$exerciseMuscleGroups = get_exercise_muscle_groups();
+
 $gymName = get_setting('gym_name', 'Golden Eagle Gym');
 $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
 ?>
@@ -824,7 +829,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               <button type="button" class="ios-btn ios-btn-primary" style="padding: 6px 14px; font-size: 12px; border-radius: 8px; flex: 1; text-align: center;" onclick="switchProfileTab('tab-measurements')">
                 <i class="fa fa-plus-circle"></i> Log Measurements
               </button>
-              <button type="button" class="ios-btn" style="padding: 6px 14px; font-size: 12px; border-radius: 8px; flex: 1; text-align: center; background: rgba(255,255,255,0.08); color: #fff;" onclick="switchProfileTab('tab-routine')">
+              <button type="button" class="ios-btn" id="btnHeroWorkoutRoutine" style="padding: 6px 14px; font-size: 12px; border-radius: 8px; flex: 1; text-align: center; background: rgba(255,255,255,0.08); color: #fff; cursor: pointer;" onclick="switchProfileTab('tab-routine', null, true)">
                 <i class="fa fa-calendar-check-o"></i> Workout Routine
               </button>
             </div>
@@ -1096,7 +1101,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
                 </p>
               </div>
               <div>
-                <button type="button" class="ios-btn ios-btn-primary" style="padding: 7px 16px; font-size: 12.5px;" onclick="switchProfileTab('tab-routine')">
+                <button type="button" class="ios-btn ios-btn-primary" id="btnOverviewCustomizeRoutine" style="padding: 7px 16px; font-size: 12.5px; cursor: pointer;" onclick="switchProfileTab('tab-routine', null, true)">
                   <i class="fa fa-pencil"></i> Customize Weekly Routine
                 </button>
               </div>
@@ -1354,57 +1359,15 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="button" class="ios-btn ios-btn-primary" style="padding: 9px 18px; font-size: 13px;" onclick="openAddWorkoutModal()">
+            <button type="button" class="ios-btn ios-btn-primary" id="btnAddExerciseTop" style="padding: 9px 18px; font-size: 13px; cursor: pointer;" onclick="openAddWorkoutModal()">
               <i class="fa fa-plus-circle"></i> Add Exercise
             </button>
-            <div class="dropdown" style="display: inline-block;">
-              <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-toggle="dropdown" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15);">
-                <i class="fa fa-magic"></i> Preset Splits <span class="caret"></span>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-right" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 6px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                <li>
-                  <form method="post" onsubmit="return confirm('Apply Push / Pull / Legs (3-Day Split)? This replaces your current schedule.');">
-                    <?php echo csrf_input(); ?>
-                    <input type="hidden" name="action" value="apply_workout_template">
-                    <input type="hidden" name="template_type" value="ppl">
-                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #e2e8f0; padding: 8px 16px; font-size: 13px; text-align: left;">
-                      <i class="fa fa-bolt" style="color: #38bdf8; margin-right: 6px;"></i> Push / Pull / Legs (3-Day Split)
-                    </button>
-                  </form>
-                </li>
-                <li>
-                  <form method="post" onsubmit="return confirm('Apply Upper / Lower (4-Day Split)? This replaces your current schedule.');">
-                    <?php echo csrf_input(); ?>
-                    <input type="hidden" name="action" value="apply_workout_template">
-                    <input type="hidden" name="template_type" value="upper_lower">
-                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #e2e8f0; padding: 8px 16px; font-size: 13px; text-align: left;">
-                      <i class="fa fa-fire" style="color: #fbbf24; margin-right: 6px;"></i> Upper / Lower (4-Day Split)
-                    </button>
-                  </form>
-                </li>
-                <li>
-                  <form method="post" onsubmit="return confirm('Apply Full Body Circuit (3-Day Split)? This replaces your current schedule.');">
-                    <?php echo csrf_input(); ?>
-                    <input type="hidden" name="action" value="apply_workout_template">
-                    <input type="hidden" name="template_type" value="full_body">
-                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #e2e8f0; padding: 8px 16px; font-size: 13px; text-align: left;">
-                      <i class="fa fa-refresh" style="color: #34d399; margin-right: 6px;"></i> Full Body Circuit (3-Day Split)
-                    </button>
-                  </form>
-                </li>
-                <li class="divider" style="background: rgba(255,255,255,0.08); margin: 6px 0;"></li>
-                <li>
-                  <form method="post" onsubmit="return confirm('Clear your entire weekly routine? You can re-add exercises or apply a preset anytime.');">
-                    <?php echo csrf_input(); ?>
-                    <input type="hidden" name="action" value="apply_workout_template">
-                    <input type="hidden" name="template_type" value="clear">
-                    <button type="submit" class="btn btn-link text-left" style="width: 100%; text-decoration: none; color: #f87171; padding: 8px 16px; font-size: 13px; text-align: left;">
-                      <i class="fa fa-trash-o" style="margin-right: 6px;"></i> Clear All Exercises
-                    </button>
-                  </form>
-                </li>
-              </ul>
-            </div>
+            <button type="button" class="btn btn-sm btn-outline-light" id="btnPresetSplits" onclick="openPresetSplitsModal()" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); color: #fff; cursor: pointer;">
+              <i class="fa fa-magic" style="color: #fbbf24; margin-right: 6px;"></i> Preset Workout Splits
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info" id="btnBrowseCatalog" onclick="scrollToExerciseCatalog()" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.25); color: #38bdf8; cursor: pointer;">
+              <i class="fa fa-book" style="margin-right: 6px;"></i> Browse 60+ Exercises
+            </button>
           </div>
         </div>
 
@@ -1543,6 +1506,151 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
+      </div>
+
+      <!-- ==================================================================== -->
+      <!-- MASTER EXERCISE LIBRARY & EQUIPMENT DIRECTORY -->
+      <!-- ==================================================================== -->
+      <div id="exerciseCatalogSection" class="ios-glass" style="padding: 28px 32px; margin-top: 30px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+          <div>
+            <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 6px;">
+              <i class="fa fa-book" style="color: var(--color-primary); margin-right: 8px;"></i>
+              Master Exercise Library &amp; Equipment Catalog
+            </h3>
+            <p style="font-size: 13px; color: #94a3b8; margin: 0;">
+              Browse all <?php echo count($masterExercises); ?>+ verified exercises sorted by category: Gym Floor, Treadmill &amp; Cardio, Dumbbells, Barbells, Machines, and Functional drills. Click <strong>+ Add to Routine</strong> on any movement to schedule it.
+            </p>
+          </div>
+          <span class="ios-badge ios-badge-info" id="catalogCountBadge" style="font-size: 12px; padding: 6px 14px;">
+            <?php echo count($masterExercises); ?> Exercises Available
+          </span>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 18px 20px; margin-bottom: 22px;">
+          <div class="row">
+            <div class="col-md-6 mb-2">
+              <label class="ios-label" style="font-size: 11px; text-transform: uppercase;">Search Movement / Equipment</label>
+              <div style="position: relative;">
+                <input type="text" id="catalogSearchInput" class="ios-input" placeholder="Type exercise name, muscle, or equipment (e.g., Incline, Cable, Bench)..." oninput="filterCatalogExercises()" style="padding-left: 36px;">
+                <i class="fa fa-search" style="position: absolute; left: 14px; top: 13px; color: #64748b; font-size: 14px;"></i>
+              </div>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-2">
+              <label class="ios-label" style="font-size: 11px; text-transform: uppercase;">Filter by Muscle Group</label>
+              <select id="catalogMuscleFilter" class="ios-input" onchange="filterCatalogExercises()">
+                <?php foreach ($exerciseMuscleGroups as $mKey => $mLabel): ?>
+                  <option value="<?php echo htmlspecialchars($mKey); ?>"><?php echo htmlspecialchars($mLabel); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="col-sm-6 col-md-3 mb-2">
+              <label class="ios-label" style="font-size: 11px; text-transform: uppercase;">Sort Order</label>
+              <select id="catalogSortOrder" class="ios-input" onchange="sortCatalogExercises()">
+                <option value="category">Category Order</option>
+                <option value="name_asc">Name (A &rarr; Z)</option>
+                <option value="muscle">Target Muscle</option>
+                <option value="difficulty">Difficulty Level</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Category Quick Filter Chips -->
+          <div style="margin-top: 14px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px;">
+            <span class="catalog-filter-btn active" data-cat="all" onclick="setCatalogCategory('all', this)">All Categories (<?php echo count($masterExercises); ?>)</span>
+            <span class="catalog-filter-btn" data-cat="floor" onclick="setCatalogCategory('floor', this)"><i class="fa fa-user"></i> Gym Floor / Bodyweight</span>
+            <span class="catalog-filter-btn" data-cat="cardio" onclick="setCatalogCategory('cardio', this)"><i class="fa fa-heartbeat"></i> Treadmill &amp; Cardio</span>
+            <span class="catalog-filter-btn" data-cat="dumbbells" onclick="setCatalogCategory('dumbbells', this)"><i class="fa fa-bullseye"></i> Free Weights (Dumbbells)</span>
+            <span class="catalog-filter-btn" data-cat="barbell" onclick="setCatalogCategory('barbell', this)"><i class="fa fa-bars"></i> Free Weights (Barbell)</span>
+            <span class="catalog-filter-btn" data-cat="machines" onclick="setCatalogCategory('machines', this)"><i class="fa fa-cogs"></i> Machines &amp; Cables</span>
+            <span class="catalog-filter-btn" data-cat="functional" onclick="setCatalogCategory('functional', this)"><i class="fa fa-refresh"></i> Functional &amp; Mobility</span>
+          </div>
+        </div>
+
+        <!-- Exercise Cards Container Grid -->
+        <div class="row" id="catalogCardsContainer">
+          <?php foreach ($masterExercises as $ex): ?>
+            <?php 
+              // Distinct theme colors per category
+              $catColor = '#38bdf8';
+              $catBg = 'rgba(56,189,248,0.12)';
+              if ($ex['category_key'] === 'floor') {
+                  $catColor = '#c084fc';
+                  $catBg = 'rgba(192,132,252,0.14)';
+              } elseif ($ex['category_key'] === 'cardio') {
+                  $catColor = '#f87171';
+                  $catBg = 'rgba(248,113,113,0.14)';
+              } elseif ($ex['category_key'] === 'dumbbells') {
+                  $catColor = '#38bdf8';
+                  $catBg = 'rgba(56,189,248,0.14)';
+              } elseif ($ex['category_key'] === 'barbell') {
+                  $catColor = '#fbbf24';
+                  $catBg = 'rgba(251,191,36,0.14)';
+              } elseif ($ex['category_key'] === 'machines') {
+                  $catColor = '#34d399';
+                  $catBg = 'rgba(52,211,153,0.14)';
+              } elseif ($ex['category_key'] === 'functional') {
+                  $catColor = '#f472b6';
+                  $catBg = 'rgba(244,114,182,0.14)';
+              }
+            ?>
+            <div class="col-md-6 col-lg-4 mb-3 catalog-item" 
+                 data-category="<?php echo $ex['category_key']; ?>" 
+                 data-muscle="<?php echo $ex['muscle_group']; ?>" 
+                 data-name="<?php echo strtolower(htmlspecialchars($ex['name'])); ?>" 
+                 data-equipment="<?php echo strtolower(htmlspecialchars($ex['equipment'])); ?>"
+                 data-difficulty="<?php echo $ex['difficulty']; ?>">
+              <div class="exercise-catalog-card">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 11px; font-weight: 700; color: <?php echo $catColor; ?>; background: <?php echo $catBg; ?>; padding: 2px 8px; border-radius: 6px;">
+                      <?php echo htmlspecialchars($ex['category']); ?>
+                    </span>
+                    <span style="font-size: 10.5px; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;">
+                      <?php echo $ex['difficulty']; ?>
+                    </span>
+                  </div>
+
+                  <h4 style="font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 6px;">
+                    <?php echo htmlspecialchars($ex['name']); ?>
+                  </h4>
+
+                  <div style="font-size: 12px; color: #38bdf8; font-weight: 600; margin-bottom: 6px;">
+                    <i class="fa fa-crosshairs" style="margin-right: 4px;"></i> <?php echo htmlspecialchars($ex['target_muscle']); ?>
+                  </div>
+
+                  <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 10px;">
+                    <i class="fa fa-wrench" style="margin-right: 4px; color: #64748b;"></i> Equipment: <span style="color: #cbd5e1;"><?php echo htmlspecialchars($ex['equipment']); ?></span>
+                  </div>
+
+                  <div style="font-size: 11.5px; color: #94a3b8; background: rgba(255,255,255,0.02); border-left: 2px solid <?php echo $catColor; ?>; padding: 6px 10px; margin-bottom: 12px; line-height: 1.4;">
+                    <?php echo htmlspecialchars($ex['form_cue']); ?>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);">
+                  <div style="font-family: monospace; font-size: 12px; color: #34d399; font-weight: 700;">
+                    <?php echo $ex['recommended_sets']; ?> sets &times; <?php echo $ex['recommended_reps']; ?>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 11.5px; padding: 3px 10px;" onclick="quickAddFromCatalog('<?php echo addslashes($ex['name']); ?>', '<?php echo addslashes($ex['target_muscle']); ?>', <?php echo $ex['recommended_sets']; ?>, '<?php echo addslashes($ex['recommended_reps']); ?>', '<?php echo addslashes($ex['form_cue']); ?>')">
+                    <i class="fa fa-plus"></i> Add to Routine
+                  </button>
+                </div>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+
+        <div id="catalogEmptyMessage" style="display: none; text-align: center; padding: 40px 20px; color: #64748b;">
+          <i class="fa fa-search" style="font-size: 28px; color: #475569; display: block; margin-bottom: 10px;"></i>
+          <span style="font-size: 14px; color: #94a3b8;">No exercises match your search or filter criteria.</span>
+          <div style="margin-top: 10px;">
+            <button type="button" class="btn btn-sm btn-outline-light" onclick="resetCatalogFilters()" style="border-radius: 8px;">
+              Reset Filters
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2219,16 +2327,38 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
   <div class="modal fade" id="addWorkoutModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content ios-modal">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.8;">&times;</button>
-          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff; margin: 0;">
             <i class="fa fa-plus-circle" style="color: var(--color-primary); margin-right: 6px;"></i> Add Exercise to Routine
           </h4>
+          <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('addWorkoutModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent;">&times;</button>
         </div>
         <form method="post" action="profile.php#routine">
           <div class="modal-body" style="padding: 24px;">
             <?php echo csrf_input(); ?>
             <input type="hidden" name="action" value="add_workout">
+
+            <div class="ios-form-group">
+              <label class="ios-label">Choose from Master Catalog (Auto-fills all details)</label>
+              <select id="catalogQuickSelect" class="ios-input" onchange="applyCatalogSelection(this.value)">
+                <option value="">-- Choose from 60+ Categorized Gym Exercises or Type Below --</option>
+                <?php
+                $groupedCatalog = [];
+                foreach ($masterExercises as $ex) {
+                    $groupedCatalog[$ex['category']][] = $ex;
+                }
+                foreach ($groupedCatalog as $catName => $catExercises):
+                ?>
+                  <optgroup label="<?php echo htmlspecialchars($catName); ?>">
+                    <?php foreach ($catExercises as $cEx): ?>
+                      <option value="<?php echo htmlspecialchars(json_encode($cEx)); ?>">
+                        <?php echo htmlspecialchars($cEx['name']); ?> (<?php echo htmlspecialchars($cEx['target_muscle']); ?>)
+                      </option>
+                    <?php endforeach; ?>
+                  </optgroup>
+                <?php endforeach; ?>
+              </select>
+            </div>
 
             <div class="row">
               <div class="col-sm-6">
@@ -2290,7 +2420,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15);">Cancel</button>
+            <button type="button" class="btn btn-outline-light" data-dismiss="modal" onclick="closeCustomModal('addWorkoutModal')" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">Cancel</button>
             <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 20px; font-size: 13px;">
               <i class="fa fa-save"></i> Save Exercise
             </button>
@@ -2304,11 +2434,11 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
   <div class="modal fade" id="editWorkoutModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content ios-modal">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.8;">&times;</button>
-          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff; margin: 0;">
             <i class="fa fa-pencil" style="color: var(--color-primary); margin-right: 6px;"></i> Edit Routine Exercise
           </h4>
+          <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('editWorkoutModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent; cursor: pointer;">&times;</button>
         </div>
         <form method="post" action="profile.php#routine">
           <div class="modal-body" style="padding: 24px;">
@@ -2365,7 +2495,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-light" data-dismiss="modal" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15);">Cancel</button>
+            <button type="button" class="btn btn-outline-light" data-dismiss="modal" onclick="closeCustomModal('editWorkoutModal')" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">Cancel</button>
             <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 20px; font-size: 13px;">
               <i class="fa fa-check"></i> Update Exercise
             </button>
@@ -2375,12 +2505,139 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
     </div>
   </div>
 
+  <!-- Preset Splits Modal -->
+  <div class="modal fade" id="presetSplitsModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content ios-modal">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff; margin: 0;">
+            <i class="fa fa-magic" style="color: #fbbf24; margin-right: 8px;"></i> Preset Workout Splits &amp; Training Routines
+          </h4>
+          <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('presetSplitsModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">
+            Select a verified training template to automatically populate your weekly schedule. You can edit, add, or delete any exercise afterwards.
+          </p>
+
+          <div class="row">
+            <!-- Split 1: Push / Pull / Legs -->
+            <div class="col-md-6 mb-3">
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(56,189,248,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #fff; font-size: 16px;">Push / Pull / Legs</strong>
+                    <span class="ios-badge ios-badge-info" style="font-size: 11px;">3-Day Hypertrophy</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
+                    <div>&bull; <strong>Monday:</strong> Push (Chest, Shoulders &amp; Triceps)</div>
+                    <div>&bull; <strong>Wednesday:</strong> Pull (Back, Rear Delts &amp; Biceps)</div>
+                    <div>&bull; <strong>Friday:</strong> Legs &amp; Core (Squats, RDLs &amp; Abs)</div>
+                  </div>
+                  <div style="font-size: 11px; color: #94a3b8;">12 compound &amp; isolation movements for maximum recovery and growth.</div>
+                </div>
+                <form method="post" onsubmit="return confirm('Apply Push / Pull / Legs (3-Day Split)? This replaces your current schedule.');" style="margin-top: 14px;">
+                  <?php echo csrf_input(); ?>
+                  <input type="hidden" name="action" value="apply_workout_template">
+                  <input type="hidden" name="template_type" value="ppl">
+                  <button type="submit" class="ios-btn ios-btn-primary" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%;">
+                    Apply PPL Split
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Split 2: Upper / Lower -->
+            <div class="col-md-6 mb-3">
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #fff; font-size: 16px;">Upper / Lower Split</strong>
+                    <span class="ios-badge" style="background: rgba(251,191,36,0.15); color: #fbbf24; font-size: 11px;">4-Day Power</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
+                    <div>&bull; <strong>Mon &amp; Thu:</strong> Upper Body (Chest, Back, OHP &amp; Lats)</div>
+                    <div>&bull; <strong>Tue &amp; Fri:</strong> Lower Body (Squats, RDLs, Calves &amp; Core)</div>
+                    <div>&bull; <strong>Wed, Sat, Sun:</strong> Rest &amp; Active Recovery</div>
+                  </div>
+                  <div style="font-size: 11px; color: #94a3b8;">High frequency split allowing 2x per week muscle stimulus.</div>
+                </div>
+                <form method="post" onsubmit="return confirm('Apply Upper / Lower (4-Day Split)? This replaces your current schedule.');" style="margin-top: 14px;">
+                  <?php echo csrf_input(); ?>
+                  <input type="hidden" name="action" value="apply_workout_template">
+                  <input type="hidden" name="template_type" value="upper_lower">
+                  <button type="submit" class="ios-btn" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%; background: #fbbf24; color: #04101e; font-weight: 700;">
+                    Apply Upper / Lower Split
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Split 3: Full Body Circuit -->
+            <div class="col-md-6 mb-3">
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(52,211,153,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #fff; font-size: 16px;">Full Body Circuit</strong>
+                    <span class="ios-badge ios-badge-success" style="font-size: 11px;">3-Day Conditioning</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
+                    <div>&bull; <strong>Mon, Wed, Fri:</strong> Total Body Workouts</div>
+                    <div>&bull; Squats, Bench, Deadlifts &amp; Core integrated</div>
+                  </div>
+                  <div style="font-size: 11px; color: #94a3b8;">Great for busy schedules, functional stamina, and elevated metabolic rate.</div>
+                </div>
+                <form method="post" onsubmit="return confirm('Apply Full Body Circuit (3-Day Split)? This replaces your current schedule.');" style="margin-top: 14px;">
+                  <?php echo csrf_input(); ?>
+                  <input type="hidden" name="action" value="apply_workout_template">
+                  <input type="hidden" name="template_type" value="full_body">
+                  <button type="submit" class="ios-btn" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%; background: #34d399; color: #04101e; font-weight: 700;">
+                    Apply Full Body Split
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Reset Routine -->
+            <div class="col-md-6 mb-3">
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(248,113,113,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #fff; font-size: 16px;">Clear Weekly Schedule</strong>
+                    <span class="ios-badge ios-badge-danger" style="font-size: 11px;">Reset</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.6; margin-bottom: 12px;">
+                    Removes all scheduled exercises so you can organize your 7 days completely from scratch.
+                  </div>
+                </div>
+                <form method="post" onsubmit="return confirm('Clear your entire weekly routine? You can re-add exercises or apply a preset anytime.');" style="margin-top: 14px;">
+                  <?php echo csrf_input(); ?>
+                  <input type="hidden" name="action" value="apply_workout_template">
+                  <input type="hidden" name="template_type" value="clear">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%;">
+                    <i class="fa fa-trash-o"></i> Clear All Exercises
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 12px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end;">
+          <button type="button" class="btn btn-outline-light" data-dismiss="modal" onclick="closeCustomModal('presetSplitsModal')" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/vendor/jquery-3.2.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
   <script src="js/bootstrap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    // Tab Switching Functionality with URL Hash persistence
-    function switchProfileTab(tabId, el) {
+    // Tab Switching Functionality with URL Hash persistence & optional scroll
+    function switchProfileTab(tabId, el, scrollToTabs) {
       document.querySelectorAll('.tab-content-panel').forEach(function(p) {
         p.classList.remove('active');
       });
@@ -2398,8 +2655,19 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         const matchingBtn = document.querySelector('.profile-tab-btn[href="#' + tabId.replace('tab-', '') + '"]');
         if (matchingBtn) matchingBtn.classList.add('active');
       }
-      window.location.hash = tabId.replace('tab-', '');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      try {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, null, '#' + tabId.replace('tab-', ''));
+        }
+      } catch(e) {}
+
+      if (scrollToTabs) {
+        const tabsBar = document.getElementById('profileTabs');
+        if (tabsBar) {
+          tabsBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
     }
 
     // Auto-select tab based on URL hash
@@ -2410,25 +2678,146 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       }
     });
 
+    // Safe Modal Helpers (supports both Bootstrap 4 jQuery and native DOM fallback)
+    function showModalSafe(modalId) {
+      const modalEl = document.getElementById(modalId);
+      if (!modalEl) return;
+
+      if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+        try {
+          $('#' + modalId).modal('show');
+        } catch (err) {
+          console.warn('Bootstrap modal show threw, using DOM fallback:', err);
+        }
+      }
+
+      // Ensure immediate display & visibility
+      modalEl.style.display = 'block';
+      modalEl.classList.add('show');
+      modalEl.removeAttribute('aria-hidden');
+      modalEl.setAttribute('aria-modal', 'true');
+      document.body.classList.add('modal-open');
+
+      if (!document.getElementById('custom-modal-backdrop') && document.querySelectorAll('.modal-backdrop').length === 0) {
+        const backdrop = document.createElement('div');
+        backdrop.id = 'custom-modal-backdrop';
+        backdrop.className = 'modal-backdrop fade show';
+        backdrop.addEventListener('click', function() {
+          hideModalSafe(modalId);
+        });
+        document.body.appendChild(backdrop);
+      }
+    }
+
+    function hideModalSafe(modalId) {
+      const modalEl = document.getElementById(modalId);
+      if (modalEl) {
+        if (window.jQuery && typeof jQuery.fn.modal === 'function') {
+          try {
+            $('#' + modalId).modal('hide');
+          } catch(err) {}
+        }
+        modalEl.style.display = 'none';
+        modalEl.classList.remove('show');
+        modalEl.setAttribute('aria-hidden', 'true');
+        modalEl.removeAttribute('aria-modal');
+      }
+
+      document.body.classList.remove('modal-open');
+      const customBd = document.getElementById('custom-modal-backdrop');
+      if (customBd) customBd.remove();
+      document.querySelectorAll('.modal-backdrop').forEach(function(b) {
+        b.remove();
+      });
+    }
+
+    function openCustomModal(modalId) { showModalSafe(modalId); }
+    function closeCustomModal(modalId) { hideModalSafe(modalId); }
+
     // Routine Planner Modal & Filter Functions
     function openAddWorkoutModal(day) {
       if (day) {
-        document.getElementById('addWorkoutDay').value = day;
+        const d = document.getElementById('addWorkoutDay');
+        if (d) d.value = day;
       }
-      $('#addWorkoutModal').modal('show');
+      showModalSafe('addWorkoutModal');
     }
 
     function openEditWorkoutModal(id, day, muscle, name, sets, reps, notes) {
-      document.getElementById('editWorkoutId').value = id;
-      document.getElementById('editWorkoutDay').value = day;
-      document.getElementById('editWorkoutMuscle').value = muscle;
-      document.getElementById('editWorkoutName').value = name;
-      document.getElementById('editWorkoutSets').value = sets;
-      document.getElementById('editWorkoutReps').value = reps;
-      document.getElementById('editWorkoutNotes').value = notes;
-      $('#editWorkoutModal').modal('show');
+      document.getElementById('editWorkoutId').value = id || '';
+      document.getElementById('editWorkoutDay').value = day || 'Monday';
+      document.getElementById('editWorkoutMuscle').value = muscle || '';
+      document.getElementById('editWorkoutName').value = name || '';
+      document.getElementById('editWorkoutSets').value = sets || 3;
+      document.getElementById('editWorkoutReps').value = reps || '10-12 reps';
+      document.getElementById('editWorkoutNotes').value = notes || '';
+      showModalSafe('editWorkoutModal');
     }
 
+    function openPresetSplitsModal() {
+      showModalSafe('presetSplitsModal');
+    }
+
+    function scrollToExerciseCatalog() {
+      switchProfileTab('tab-routine');
+      setTimeout(function() {
+        const el = document.getElementById('exerciseCatalogSection');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
+    }
+
+    // Quick Add from Master Exercise Catalog to Routine Modal
+    function quickAddFromCatalog(name, muscle, sets, reps, formCue) {
+      document.getElementById('addWorkoutName').value = name || '';
+      document.getElementById('addWorkoutMuscle').value = muscle || '';
+      document.getElementById('addWorkoutSets').value = sets || 3;
+      document.getElementById('addWorkoutReps').value = reps || '10-12 reps';
+      document.getElementById('addWorkoutNotes').value = formCue || '';
+      showModalSafe('addWorkoutModal');
+    }
+
+    // Global backdrop, dismiss button, and Escape key listeners
+    document.addEventListener('click', function(e) {
+      const dismissBtn = e.target.closest('[data-dismiss="modal"]');
+      if (dismissBtn) {
+        const parentModal = dismissBtn.closest('.modal');
+        if (parentModal) {
+          hideModalSafe(parentModal.id);
+        }
+      }
+      if (e.target.classList.contains('modal') && (e.target.classList.contains('show') || e.target.style.display === 'block')) {
+        hideModalSafe(e.target.id);
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(function(m) {
+          if (m.classList.contains('show') || m.style.display === 'block') {
+            hideModalSafe(m.id);
+          }
+        });
+      }
+    });
+
+    // Auto-fill from catalog dropdown in Add Modal
+    function applyCatalogSelection(rawJson) {
+      if (!rawJson) return;
+      try {
+        const ex = JSON.parse(rawJson);
+        document.getElementById('addWorkoutName').value = ex.name || '';
+        document.getElementById('addWorkoutMuscle').value = ex.target_muscle || '';
+        document.getElementById('addWorkoutSets').value = ex.recommended_sets || 3;
+        document.getElementById('addWorkoutReps').value = ex.recommended_reps || '10-12 reps';
+        document.getElementById('addWorkoutNotes').value = ex.form_cue || '';
+      } catch (e) {
+        console.error('Error parsing catalog exercise:', e);
+      }
+    }
+
+    // Filter Weekly Routine Days (Monday - Sunday)
     function filterRoutineDays(day, btn) {
       document.querySelectorAll('.routine-filter-chip').forEach(function(b) {
         b.classList.remove('active');
@@ -2443,6 +2832,86 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
           card.style.display = 'none';
         }
       });
+    }
+
+    // Filter Master Exercise Catalog by Search, Category & Muscle
+    let currentCatalogCategory = 'all';
+
+    function setCatalogCategory(catKey, btn) {
+      currentCatalogCategory = catKey;
+      document.querySelectorAll('.catalog-filter-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      if (btn) btn.classList.add('active');
+      filterCatalogExercises();
+    }
+
+    function filterCatalogExercises() {
+      const search = (document.getElementById('catalogSearchInput')?.value || '').toLowerCase().trim();
+      const muscle = document.getElementById('catalogMuscleFilter')?.value || 'all';
+      const items = document.querySelectorAll('.catalog-item');
+      let visibleCount = 0;
+
+      items.forEach(function(item) {
+        const itemCat = item.getAttribute('data-category');
+        const itemMuscle = item.getAttribute('data-muscle');
+        const itemName = item.getAttribute('data-name');
+        const itemEquip = item.getAttribute('data-equipment');
+
+        const matchesCat = (currentCatalogCategory === 'all' || itemCat === currentCatalogCategory);
+        const matchesMuscle = (muscle === 'all' || itemMuscle === muscle);
+        const matchesSearch = (!search || itemName.includes(search) || itemEquip.includes(search) || itemMuscle.toLowerCase().includes(search));
+
+        if (matchesCat && matchesMuscle && matchesSearch) {
+          item.style.display = '';
+          visibleCount++;
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      const badge = document.getElementById('catalogCountBadge');
+      if (badge) {
+        badge.textContent = visibleCount + ' Exercises Available';
+      }
+
+      const emptyMsg = document.getElementById('catalogEmptyMessage');
+      if (emptyMsg) {
+        emptyMsg.style.display = (visibleCount === 0) ? 'block' : 'none';
+      }
+    }
+
+    function sortCatalogExercises() {
+      const order = document.getElementById('catalogSortOrder')?.value || 'category';
+      const container = document.getElementById('catalogCardsContainer');
+      if (!container) return;
+      const items = Array.from(container.querySelectorAll('.catalog-item'));
+
+      items.sort(function(a, b) {
+        if (order === 'name_asc') {
+          return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+        } else if (order === 'muscle') {
+          return a.getAttribute('data-muscle').localeCompare(b.getAttribute('data-muscle'));
+        } else if (order === 'difficulty') {
+          const diffRank = { 'Beginner': 1, 'Intermediate': 2, 'Advanced': 3 };
+          return (diffRank[a.getAttribute('data-difficulty')] || 2) - (diffRank[b.getAttribute('data-difficulty')] || 2);
+        } else {
+          // Default: Category order
+          const catRank = { 'floor': 1, 'cardio': 2, 'dumbbells': 3, 'barbell': 4, 'machines': 5, 'functional': 6 };
+          return (catRank[a.getAttribute('data-category')] || 99) - (catRank[b.getAttribute('data-category')] || 99);
+        }
+      });
+
+      items.forEach(function(item) {
+        container.appendChild(item);
+      });
+    }
+
+    function resetCatalogFilters() {
+      document.getElementById('catalogSearchInput').value = '';
+      document.getElementById('catalogMuscleFilter').value = 'all';
+      document.getElementById('catalogSortOrder').value = 'category';
+      setCatalogCategory('all', document.querySelector('.catalog-filter-btn[data-cat="all"]'));
     }
 
     // Metric <-> Imperial Unit Auto-Conversion on Form

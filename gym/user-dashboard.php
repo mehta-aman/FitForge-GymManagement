@@ -391,7 +391,7 @@ $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urle
   </div>
 
   <?php include 'include/footer.php'; ?>
-  <script src="js/jquery-3.2.1.min.js"></script>
+  <script src="js/vendor/jquery-3.2.1.min.js"></script>
   <script src="js/bootstrap.min.js"></script>
 </body>
 </html>
