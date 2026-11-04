@@ -841,6 +841,220 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       padding: 16px 24px;
     }
+
+    /* ==========================================================================
+       FITFORGE RESPONSIVE ENHANCEMENTS FOR PHONE & TABLET DEVICES
+       ========================================================================== */
+    @media (max-width: 991.98px) {
+      .modal-dialog.modal-xl,
+      .modal-dialog.modal-lg {
+        max-width: 96% !important;
+        margin: 15px auto !important;
+      }
+    }
+
+    @media (max-width: 767.98px) {
+      /* Mobile Modals */
+      .modal-dialog {
+        margin: 8px auto !important;
+        width: calc(100% - 16px) !important;
+        max-width: 100% !important;
+      }
+      .modal-content.ios-modal {
+        border-radius: 16px !important;
+      }
+      .modal-content.ios-modal .modal-header {
+        padding: 14px 16px !important;
+      }
+      .modal-content.ios-modal .modal-header h4 {
+        font-size: 16px !important;
+        line-height: 1.3 !important;
+      }
+      .modal-content.ios-modal .modal-body {
+        padding: 14px 16px !important;
+      }
+      .modal-content.ios-modal .modal-footer {
+        padding: 12px 16px !important;
+      }
+
+      /* Preset Hub Toolbar */
+      .preset-hub-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 12px !important;
+        gap: 12px !important;
+      }
+      .preset-hub-left {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+      }
+      .preset-hub-search-wrapper {
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      .preset-filter-chips-container {
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        padding-bottom: 4px !important;
+        -webkit-overflow-scrolling: touch !important;
+        width: 100% !important;
+        scrollbar-width: none !important;
+      }
+      .preset-filter-chips-container::-webkit-scrollbar {
+        display: none !important;
+      }
+      .preset-hub-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+      }
+      .preset-hub-actions button {
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+        padding: 8px 6px !important;
+        font-size: 11.5px !important;
+      }
+
+      /* Preview Modal Footer */
+      .preview-modal-footer {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        padding: 12px 16px !important;
+      }
+      .preview-modal-footer form,
+      .preview-modal-footer button {
+        width: 100% !important;
+      }
+      .preview-modal-footer .ios-btn-primary {
+        padding: 10px !important;
+        font-size: 13px !important;
+      }
+
+      /* Routine Section Header Actions */
+      .routine-header-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin-top: 14px !important;
+      }
+      .routine-header-actions button {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 8px 6px !important;
+        font-size: 12px !important;
+        text-align: center !important;
+        justify-content: center !important;
+      }
+
+      /* Preset Builder Table transformed into mobile touch-cards */
+      #builderExercisesTable thead {
+        display: none !important;
+      }
+      #builderExercisesTable,
+      #builderExercisesTable tbody,
+      .builder-exercise-row {
+        display: block !important;
+        width: 100% !important;
+      }
+      .builder-exercise-row {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(56, 189, 248, 0.22) !important;
+        border-radius: 14px !important;
+        padding: 14px !important;
+        margin-bottom: 12px !important;
+      }
+      .builder-exercise-row td {
+        display: block !important;
+        width: 100% !important;
+        padding: 4px 0 !important;
+        border: none !important;
+      }
+      .builder-exercise-row td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 3px;
+        letter-spacing: 0.5px;
+      }
+      .builder-exercise-row td[data-label="Remove"]::before {
+        display: none !important;
+      }
+      .builder-exercise-row td[data-label="Remove"] {
+        padding-top: 8px !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+        margin-top: 6px !important;
+      }
+    }
+
+    @media (max-width: 575.98px) {
+      .routine-day-card {
+        padding: 16px 14px !important;
+      }
+
+      /* Exercise Items in Day Cards */
+      .exercise-item-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
+      }
+      .exercise-item-row > div:first-child {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+      .exercise-item-row > div:last-child {
+        width: 100% !important;
+        justify-content: space-between !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        padding-top: 8px !important;
+      }
+
+      /* Daily Routine Header */
+      .routine-day-card > div:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+      }
+      .routine-day-card > div:first-child > div:last-child {
+        width: 100% !important;
+      }
+      .routine-day-card > div:first-child > div:last-child button {
+        width: 100% !important;
+      }
+
+      /* Profile Overview Snapshot Tiles */
+      .profile-snapshot-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+      }
+
+      /* Exercise Catalog Search & Filters */
+      #exerciseCatalogSection {
+        padding: 18px 16px !important;
+      }
+      #exerciseCatalogSection .row > div {
+        margin-bottom: 8px !important;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .routine-header-actions {
+        grid-template-columns: 1fr !important;
+      }
+      .preset-hub-actions {
+        grid-template-columns: 1fr !important;
+      }
+    }
     
     /* Print Stylesheet for Fitness Report */
     @media print {
@@ -1475,7 +1689,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               Customize your 7-day training split, add exercises, adjust sets and target reps, or select balanced workout templates.
             </p>
           </div>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <div class="routine-header-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button type="button" class="ios-btn ios-btn-primary" id="btnAddExerciseTop" style="padding: 9px 18px; font-size: 13px; cursor: pointer;" onclick="openAddWorkoutModal()">
               <i class="fa fa-plus-circle"></i> Add Exercise
             </button>
@@ -2662,13 +2876,13 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         </div>
         <div class="modal-body" style="padding: 24px;">
           <!-- Controls Toolbar: Search, Filters & Action Buttons -->
-          <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 18px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 280px;">
-              <div style="position: relative; max-width: 300px; width: 100%;">
+          <div class="preset-hub-toolbar" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 18px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div class="preset-hub-left" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 280px;">
+              <div class="preset-hub-search-wrapper" style="position: relative; max-width: 300px; width: 100%;">
                 <input type="text" id="presetSearchInput" class="ios-input" placeholder="Search presets by title, tag, or muscle..." oninput="filterPresetCards()" style="padding-left: 34px; font-size: 12.5px; height: 38px;">
                 <i class="fa fa-search" style="position: absolute; left: 12px; top: 12px; color: #64748b; font-size: 13px;"></i>
               </div>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <div class="preset-filter-chips-container" style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <button type="button" class="preset-filter-chip active" id="chipPresetAll" onclick="setPresetFilter('all', this)" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; border: 1px solid rgba(56,189,248,0.4); background: rgba(56,189,248,0.18); color: #38bdf8; font-weight: 700; cursor: pointer;">
                   All Presets (<?php echo count($systemWorkoutPresets) + count($userWorkoutPresets); ?>)
                 </button>
@@ -2680,7 +2894,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
                 </button>
               </div>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="preset-hub-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button type="button" class="btn btn-sm btn-outline-warning" onclick="openSaveCurrentAsPresetModal()" style="border-radius: 9px; padding: 7px 14px; font-size: 12px; background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.3); color: #fbbf24; font-weight: 700; cursor: pointer;">
                 <i class="fa fa-floppy-o" style="margin-right: 5px;"></i> Save Current Schedule
               </button>
@@ -2870,7 +3084,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
           <div id="previewPresetStats" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;"></div>
           <div id="previewPresetDaysContainer" style="max-height: 480px; overflow-y: auto; padding-right: 4px;"></div>
         </div>
-        <div class="modal-footer" style="padding: 14px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-footer preview-modal-footer" style="padding: 14px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
           <button type="button" class="btn btn-outline-light" onclick="closeCustomModal('previewPresetModal'); openPresetSplitsModal();" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">
             &larr; Back to Presets
           </button>
@@ -3006,7 +3220,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               </div>
 
               <div class="table-responsive" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(0,0,0,0.2);">
-                <table class="table table-dark table-sm mb-0" style="background: transparent; font-size: 12.5px;">
+                <table class="table table-dark table-sm mb-0" id="builderExercisesTable" style="background: transparent; font-size: 12.5px;">
                   <thead>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.12); color: #94a3b8; font-size: 11px; text-transform: uppercase;">
                       <th style="width: 14%; padding: 10px;">Day of Week</th>
@@ -3449,10 +3663,11 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
     function addPresetBuilderRow(day = 'Monday', muscle = 'Chest', name = '', sets = 3, reps = '10-12 reps', notes = '') {
       const tbody = document.getElementById('builderExercisesTbody');
       const tr = document.createElement('tr');
+      tr.className = 'builder-exercise-row';
       tr.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
 
       tr.innerHTML = 
-        '<td style="padding: 6px;">' +
+        '<td data-label="Day of Week" style="padding: 6px;">' +
           '<select class="ios-input row-day" style="font-size: 12px; padding: 6px 8px;">' +
             '<option value="Monday"' + (day === 'Monday' ? ' selected' : '') + '>Monday</option>' +
             '<option value="Tuesday"' + (day === 'Tuesday' ? ' selected' : '') + '>Tuesday</option>' +
@@ -3463,7 +3678,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             '<option value="Sunday"' + (day === 'Sunday' ? ' selected' : '') + '>Sunday</option>' +
           '</select>' +
         '</td>' +
-        '<td style="padding: 6px;">' +
+        '<td data-label="Target Muscle" style="padding: 6px;">' +
           '<select class="ios-input row-muscle" style="font-size: 12px; padding: 6px 8px;">' +
             '<option value="Chest"' + (muscle === 'Chest' ? ' selected' : '') + '>Chest</option>' +
             '<option value="Back"' + (muscle === 'Back' ? ' selected' : '') + '>Back</option>' +
@@ -3476,20 +3691,20 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             '<option value="Functional & Mobility"' + (muscle.includes('Functional') ? ' selected' : '') + '>Functional</option>' +
           '</select>' +
         '</td>' +
-        '<td style="padding: 6px;">' +
+        '<td data-label="Exercise Movement" style="padding: 6px;">' +
           '<input type="text" class="ios-input row-name" list="exerciseSuggestions" value="' + (name.replace(/"/g, '&quot;')) + '" placeholder="Type or select exercise..." style="font-size: 12px; padding: 6px 10px;" required>' +
         '</td>' +
-        '<td style="padding: 6px;">' +
+        '<td data-label="Sets" style="padding: 6px;">' +
           '<input type="number" class="ios-input row-sets" value="' + sets + '" min="1" max="10" style="font-size: 12px; padding: 6px 8px;" required>' +
         '</td>' +
-        '<td style="padding: 6px;">' +
+        '<td data-label="Target Reps" style="padding: 6px;">' +
           '<input type="text" class="ios-input row-reps" value="' + (reps.replace(/"/g, '&quot;')) + '" placeholder="e.g. 8-10 reps" style="font-size: 12px; padding: 6px 8px;" required>' +
         '</td>' +
-        '<td style="padding: 6px;">' +
+        '<td data-label="Form Cue / Notes" style="padding: 6px;">' +
           '<input type="text" class="ios-input row-notes" value="' + (notes.replace(/"/g, '&quot;')) + '" placeholder="Cues, cadence..." style="font-size: 12px; padding: 6px 8px;">' +
         '</td>' +
-        '<td style="padding: 6px; text-align: center;">' +
-          '<button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest(\'tr\').remove()" style="padding: 4px 8px; border-radius: 6px;"><i class="fa fa-times"></i></button>' +
+        '<td data-label="Remove" style="padding: 6px; text-align: center;">' +
+          '<button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="this.closest(\'tr\').remove()" style="padding: 6px 10px; border-radius: 6px;"><i class="fa fa-times"></i> <span class="d-md-none" style="margin-left: 4px;">Remove Movement</span></button>' +
         '</td>';
 
       tbody.appendChild(tr);
