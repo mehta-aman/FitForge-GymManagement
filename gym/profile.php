@@ -2,6 +2,7 @@
 require_once 'include/config.php';
 require_once 'include/fitness_metrics.php';
 require_once 'include/exercise_catalog.php';
+require_once 'include/workout_presets.php';
 
 if (empty($_SESSION['uid'])) {
     header('location:login.php');
@@ -320,76 +321,190 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Delete existing routine for this user
             $dbh->prepare("DELETE FROM tbl_workout_plans WHERE user_id = :uid")->execute([':uid' => $userId]);
 
-            $newExercises = [];
-            $tplName = '';
-            if ($template === 'ppl') {
-                $newExercises = [
-                    ['Monday', 'Push: Chest & Triceps', 'Barbell Bench Press', 4, '8-10 reps', 'Control descent, explosive press'],
-                    ['Monday', 'Push: Chest & Triceps', 'Incline Dumbbell Press', 3, '10-12 reps', 'Full stretch at bottom'],
-                    ['Monday', 'Push: Chest & Triceps', 'Overhead Dumbbell Press', 3, '10-12 reps', 'Core braced, strict form'],
-                    ['Monday', 'Push: Chest & Triceps', 'Cable Tricep Pushdowns', 3, '12-15 reps', 'Squeeze at extension'],
-                    ['Wednesday', 'Pull: Back & Biceps', 'Lat Pulldowns', 4, '10-12 reps', 'Drive elbows downwards'],
-                    ['Wednesday', 'Pull: Back & Biceps', 'Seated Cable Rows', 3, '10-12 reps', 'Retract scapula'],
-                    ['Wednesday', 'Pull: Back & Biceps', 'Dumbbell Hammer Curls', 3, '12 reps', 'Strict form, no swinging'],
-                    ['Wednesday', 'Pull: Back & Biceps', 'Face Pulls', 3, '15 reps', 'Rotator cuff health'],
-                    ['Friday', 'Legs & Core', 'Barbell Back Squats', 4, '8-10 reps', 'Deep hip hinge below parallel'],
-                    ['Friday', 'Legs & Core', 'Romanian Deadlifts', 3, '10-12 reps', 'Hamstring stretch'],
-                    ['Friday', 'Legs & Core', 'Leg Press', 3, '12-15 reps', 'Controlled cadence'],
-                    ['Friday', 'Legs & Core', 'Hanging Leg Raises', 3, '15 reps', 'Strict form, no swinging'],
-                ];
-                $tplName = 'Push / Pull / Legs (3-Day Split)';
-            } elseif ($template === 'upper_lower') {
-                $newExercises = [
-                    ['Monday', 'Upper Body Power', 'Barbell Bench Press', 4, '6-8 reps', 'Heavy compound'],
-                    ['Monday', 'Upper Body Power', 'Barbell Bent Over Row', 4, '6-8 reps', 'Torso at 45 degrees'],
-                    ['Monday', 'Upper Body Power', 'Overhead Military Press', 3, '8 reps', 'Full lockout'],
-                    ['Tuesday', 'Lower Body Power', 'Barbell Back Squats', 4, '6-8 reps', 'Deep hip hinge'],
-                    ['Tuesday', 'Lower Body Power', 'Romanian Deadlifts', 4, '8-10 reps', 'Posterior chain'],
-                    ['Tuesday', 'Lower Body Power', 'Standing Calf Raises', 4, '15 reps', 'Full extension'],
-                    ['Thursday', 'Upper Body Hypertrophy', 'Incline Dumbbell Press', 3, '10-12 reps', 'Upper chest focus'],
-                    ['Thursday', 'Upper Body Hypertrophy', 'Lat Pulldowns', 3, '10-12 reps', 'Wide grip'],
-                    ['Thursday', 'Upper Body Hypertrophy', 'Lateral Raises', 4, '15 reps', 'Side delts'],
-                    ['Friday', 'Lower Body Hypertrophy', 'Leg Press', 4, '12-15 reps', 'Continuous tension'],
-                    ['Friday', 'Lower Body Hypertrophy', 'Walking Dumbbell Lunges', 3, '20 paces', 'Glutes & quads'],
-                    ['Friday', 'Lower Body Hypertrophy', 'Plank Hold', 3, '60 secs', 'Core stability'],
-                ];
-                $tplName = 'Upper / Lower (4-Day Split)';
-            } elseif ($template === 'full_body') {
-                $newExercises = [
-                    ['Monday', 'Full Body A', 'Barbell Back Squats', 3, '10 reps', 'Foundation strength'],
-                    ['Monday', 'Full Body A', 'Dumbbell Bench Press', 3, '10 reps', 'Chest hypertrophy'],
-                    ['Monday', 'Full Body A', 'Seated Cable Row', 3, '12 reps', 'Upper back'],
-                    ['Wednesday', 'Full Body B', 'Deadlifts', 3, '6-8 reps', 'Posterior chain'],
-                    ['Wednesday', 'Full Body B', 'Overhead Dumbbell Press', 3, '10 reps', 'Shoulder strength'],
-                    ['Wednesday', 'Full Body B', 'Lat Pulldowns', 3, '10 reps', 'Back width'],
-                    ['Friday', 'Full Body C', 'Leg Press', 3, '12 reps', 'Quad volume'],
-                    ['Friday', 'Full Body C', 'Dips or Incline Push-ups', 3, '12 reps', 'Chest & triceps'],
-                    ['Friday', 'Full Body C', 'Hanging Knee Raises', 3, '15 reps', 'Core endurance'],
-                ];
-                $tplName = 'Full Body Circuit (3-Day Split)';
-            } elseif ($template === 'clear') {
-                $tplName = 'Weekly Routine Cleared';
-            }
-
-            if (!empty($newExercises)) {
-                $insTplStmt = $dbh->prepare("INSERT INTO tbl_workout_plans 
-                    (user_id, day_of_week, target_muscle, exercise_name, sets, reps, notes, gym_id)
-                    VALUES 
-                    (:uid, :day, :muscle, :name, :sets, :reps, :notes, :gym_id)");
-                foreach ($newExercises as $ex) {
-                    $insTplStmt->execute([
-                        ':uid' => $userId,
-                        ':day' => $ex[0],
-                        ':muscle' => $ex[1],
-                        ':name' => $ex[2],
-                        ':sets' => $ex[3],
-                        ':reps' => $ex[4],
-                        ':notes' => $ex[5],
-                        ':gym_id' => $gymId
-                    ]);
+            if ($template === 'clear') {
+                $flashSuccess = 'Weekly routine cleared successfully.';
+            } else {
+                $preset = find_preset_by_identifier($template, $userId, $dbh);
+                if ($preset && !empty($preset['exercises'])) {
+                    $insTplStmt = $dbh->prepare("INSERT INTO tbl_workout_plans 
+                        (user_id, day_of_week, target_muscle, exercise_name, sets, reps, notes, gym_id)
+                        VALUES 
+                        (:uid, :day, :muscle, :name, :sets, :reps, :notes, :gym_id)");
+                    foreach ($preset['exercises'] as $ex) {
+                        $insTplStmt->execute([
+                            ':uid' => $userId,
+                            ':day' => $ex['day'],
+                            ':muscle' => $ex['muscle'],
+                            ':name' => $ex['name'],
+                            ':sets' => intval($ex['sets'] ?? 3),
+                            ':reps' => trim($ex['reps'] ?? '10-12 reps'),
+                            ':notes' => trim($ex['notes'] ?? ''),
+                            ':gym_id' => $gymId
+                        ]);
+                    }
+                    $flashSuccess = "Applied preset split: " . htmlspecialchars($preset['title']) . " (" . count($preset['exercises']) . " exercises scheduled)!";
+                } else {
+                    $flashError = "Preset split not found or has no exercises.";
                 }
             }
-            $flashSuccess = "Applied preset: {$tplName}!";
+        }
+
+        // ----------------------------------------------------------------------
+        // Action H: Save Current Routine as Custom Preset
+        // ----------------------------------------------------------------------
+        elseif ($action === 'save_current_as_preset') {
+            $pTitle = trim($_POST['preset_title'] ?? '');
+            $pTag = trim($_POST['preset_tag'] ?? 'Custom Split');
+            $pDiff = trim($_POST['preset_difficulty'] ?? 'Intermediate');
+            $pDesc = trim($_POST['preset_description'] ?? '');
+
+            if (empty($pTitle)) {
+                $flashError = "Please specify a title for your custom preset.";
+            } else {
+                $wStmt = $dbh->prepare("SELECT day_of_week as day, target_muscle as muscle, exercise_name as name, sets, reps, notes FROM tbl_workout_plans WHERE user_id = :uid ORDER BY FIELD(day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), id ASC");
+                $wStmt->execute([':uid' => $userId]);
+                $currExs = $wStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($currExs)) {
+                    $flashError = "Your weekly schedule is currently empty. Add exercises first before saving as a preset.";
+                } else {
+                    $daysCount = count(array_unique(array_column($currExs, 'day')));
+                    $insPreset = $dbh->prepare("INSERT INTO tbl_workout_presets 
+                        (user_id, gym_id, title, tag, difficulty, days_count, description, exercises_json, is_system)
+                        VALUES 
+                        (:uid, :gym_id, :title, :tag, :diff, :days_count, :desc, :json, 0)");
+                    $insPreset->execute([
+                        ':uid' => $userId,
+                        ':gym_id' => $gymId,
+                        ':title' => $pTitle,
+                        ':tag' => $pTag ?: 'Custom Split',
+                        ':diff' => in_array($pDiff, ['Beginner', 'Intermediate', 'Advanced']) ? $pDiff : 'Intermediate',
+                        ':days_count' => $daysCount,
+                        ':desc' => $pDesc,
+                        ':json' => json_encode($currExs, JSON_UNESCAPED_UNICODE)
+                    ]);
+                    $flashSuccess = "Saved current schedule as '{$pTitle}' custom preset!";
+                }
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Action I: Create Brand New Custom Preset
+        // ----------------------------------------------------------------------
+        elseif ($action === 'create_custom_preset') {
+            $pTitle = trim($_POST['preset_title'] ?? '');
+            $pTag = trim($_POST['preset_tag'] ?? 'Custom Split');
+            $pDiff = trim($_POST['preset_difficulty'] ?? 'Intermediate');
+            $pDesc = trim($_POST['preset_description'] ?? '');
+            $rawExercises = $_POST['preset_exercises_json'] ?? '[]';
+            $exercises = json_decode($rawExercises, true);
+
+            if (empty($pTitle)) {
+                $flashError = "Please enter a preset title.";
+            } elseif (!is_array($exercises) || empty($exercises)) {
+                $flashError = "Please add at least one exercise to your custom split.";
+            } else {
+                $cleanExs = [];
+                $days = [];
+                foreach ($exercises as $ex) {
+                    $day = trim($ex['day'] ?? 'Monday');
+                    $muscle = trim($ex['muscle'] ?? 'Chest');
+                    $name = trim($ex['name'] ?? '');
+                    $sets = max(1, intval($ex['sets'] ?? 3));
+                    $reps = trim($ex['reps'] ?? '10-12 reps');
+                    $notes = trim($ex['notes'] ?? '');
+                    if ($name !== '') {
+                        $cleanExs[] = ['day' => $day, 'muscle' => $muscle, 'name' => $name, 'sets' => $sets, 'reps' => $reps, 'notes' => $notes];
+                        $days[$day] = true;
+                    }
+                }
+                if (empty($cleanExs)) {
+                    $flashError = "Please provide valid exercise names.";
+                } else {
+                    $insPreset = $dbh->prepare("INSERT INTO tbl_workout_presets 
+                        (user_id, gym_id, title, tag, difficulty, days_count, description, exercises_json, is_system)
+                        VALUES 
+                        (:uid, :gym_id, :title, :tag, :diff, :days_count, :desc, :json, 0)");
+                    $insPreset->execute([
+                        ':uid' => $userId,
+                        ':gym_id' => $gymId,
+                        ':title' => $pTitle,
+                        ':tag' => $pTag ?: 'Custom Split',
+                        ':diff' => in_array($pDiff, ['Beginner', 'Intermediate', 'Advanced']) ? $pDiff : 'Intermediate',
+                        ':days_count' => count($days),
+                        ':desc' => $pDesc,
+                        ':json' => json_encode($cleanExs, JSON_UNESCAPED_UNICODE)
+                    ]);
+                    $flashSuccess = "Created custom preset '{$pTitle}' with " . count($cleanExs) . " exercises!";
+                }
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Action J: Edit Custom Preset
+        // ----------------------------------------------------------------------
+        elseif ($action === 'edit_custom_preset') {
+            $presetId = intval($_POST['preset_id'] ?? 0);
+            $pTitle = trim($_POST['preset_title'] ?? '');
+            $pTag = trim($_POST['preset_tag'] ?? 'Custom Split');
+            $pDiff = trim($_POST['preset_difficulty'] ?? 'Intermediate');
+            $pDesc = trim($_POST['preset_description'] ?? '');
+            $rawExercises = $_POST['preset_exercises_json'] ?? '[]';
+            $exercises = json_decode($rawExercises, true);
+
+            $chkStmt = $dbh->prepare("SELECT id FROM tbl_workout_presets WHERE id = :id AND user_id = :uid");
+            $chkStmt->execute([':id' => $presetId, ':uid' => $userId]);
+            if (!$chkStmt->fetch()) {
+                $flashError = "Unauthorized: You can only edit your own custom presets.";
+            } elseif (empty($pTitle)) {
+                $flashError = "Preset title cannot be empty.";
+            } elseif (!is_array($exercises) || empty($exercises)) {
+                $flashError = "Please keep at least one exercise in the preset.";
+            } else {
+                $cleanExs = [];
+                $days = [];
+                foreach ($exercises as $ex) {
+                    $day = trim($ex['day'] ?? 'Monday');
+                    $muscle = trim($ex['muscle'] ?? 'Chest');
+                    $name = trim($ex['name'] ?? '');
+                    $sets = max(1, intval($ex['sets'] ?? 3));
+                    $reps = trim($ex['reps'] ?? '10-12 reps');
+                    $notes = trim($ex['notes'] ?? '');
+                    if ($name !== '') {
+                        $cleanExs[] = ['day' => $day, 'muscle' => $muscle, 'name' => $name, 'sets' => $sets, 'reps' => $reps, 'notes' => $notes];
+                        $days[$day] = true;
+                    }
+                }
+                $updStmt = $dbh->prepare("UPDATE tbl_workout_presets SET 
+                    title = :title,
+                    tag = :tag,
+                    difficulty = :diff,
+                    days_count = :days_count,
+                    description = :desc,
+                    exercises_json = :json
+                    WHERE id = :id AND user_id = :uid");
+                $updStmt->execute([
+                    ':title' => $pTitle,
+                    ':tag' => $pTag ?: 'Custom Split',
+                    ':diff' => in_array($pDiff, ['Beginner', 'Intermediate', 'Advanced']) ? $pDiff : 'Intermediate',
+                    ':days_count' => count($days),
+                    ':desc' => $pDesc,
+                    ':json' => json_encode($cleanExs, JSON_UNESCAPED_UNICODE),
+                    ':id' => $presetId,
+                    ':uid' => $userId
+                ]);
+                $flashSuccess = "Updated custom preset '{$pTitle}' successfully!";
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // Action K: Delete Custom Preset
+        // ----------------------------------------------------------------------
+        elseif ($action === 'delete_custom_preset') {
+            $presetId = intval($_POST['preset_id'] ?? 0);
+            $delStmt = $dbh->prepare("DELETE FROM tbl_workout_presets WHERE id = :id AND user_id = :uid");
+            $delStmt->execute([':id' => $presetId, ':uid' => $userId]);
+            $flashSuccess = "Custom split preset deleted.";
         }
     }
 }
@@ -504,6 +619,8 @@ $todayExercises = $weeklyWorkouts[$todayDayOfWeek] ?? [];
 $masterExercises = get_master_exercise_catalog();
 $exerciseCategories = get_exercise_categories();
 $exerciseMuscleGroups = get_exercise_muscle_groups();
+$systemWorkoutPresets = get_system_workout_presets();
+$userWorkoutPresets = get_user_workout_presets($userId, $dbh);
 
 $gymName = get_setting('gym_name', 'Golden Eagle Gym');
 $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
@@ -1364,6 +1481,9 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             </button>
             <button type="button" class="btn btn-sm btn-outline-light" id="btnPresetSplits" onclick="openPresetSplitsModal()" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); color: #fff; cursor: pointer;">
               <i class="fa fa-magic" style="color: #fbbf24; margin-right: 6px;"></i> Preset Workout Splits
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning" id="btnSaveCurrentRoutine" onclick="openSaveCurrentAsPresetModal()" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.25); color: #fbbf24; cursor: pointer;">
+              <i class="fa fa-floppy-o" style="margin-right: 6px;"></i> Save as Preset
             </button>
             <button type="button" class="btn btn-sm btn-outline-info" id="btnBrowseCatalog" onclick="scrollToExerciseCatalog()" style="border-radius: 10px; padding: 8px 16px; font-size: 13px; background: rgba(56,189,248,0.08); border-color: rgba(56,189,248,0.25); color: #38bdf8; cursor: pointer;">
               <i class="fa fa-book" style="margin-right: 6px;"></i> Browse <?php echo count($masterExercises); ?> Exercises
@@ -2525,116 +2645,199 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
     </div>
   </div>
 
-  <!-- Preset Splits Modal -->
+  <!-- Preset Splits Modal (Enhanced Preset Hub) -->
   <div class="modal fade" id="presetSplitsModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document" style="max-width: 1140px;">
       <div class="modal-content ios-modal">
-        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <h4 class="modal-title" style="font-weight: 800; font-size: 18px; color: #fff; margin: 0;">
-            <i class="fa fa-magic" style="color: #fbbf24; margin-right: 8px;"></i> Preset Workout Splits &amp; Training Routines
-          </h4>
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 18px 24px;">
+          <div>
+            <h4 class="modal-title" style="font-weight: 800; font-size: 19px; color: #fff; margin: 0;">
+              <i class="fa fa-magic" style="color: #fbbf24; margin-right: 8px;"></i> Workout Split Preset Library &amp; Custom Program Hub
+            </h4>
+            <p style="font-size: 12.5px; color: #94a3b8; margin: 4px 0 0;">
+              Choose from verified training templates or build, edit, and organize your own custom split presets.
+            </p>
+          </div>
           <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('presetSplitsModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent; cursor: pointer;">&times;</button>
         </div>
         <div class="modal-body" style="padding: 24px;">
-          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">
-            Select a verified training template to automatically populate your weekly schedule. You can edit, add, or delete any exercise afterwards.
-          </p>
-
-          <div class="row">
-            <!-- Split 1: Push / Pull / Legs -->
-            <div class="col-md-6 mb-3">
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(56,189,248,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #fff; font-size: 16px;">Push / Pull / Legs</strong>
-                    <span class="ios-badge ios-badge-info" style="font-size: 11px;">3-Day Hypertrophy</span>
-                  </div>
-                  <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
-                    <div>&bull; <strong>Monday:</strong> Push (Chest, Shoulders &amp; Triceps)</div>
-                    <div>&bull; <strong>Wednesday:</strong> Pull (Back, Rear Delts &amp; Biceps)</div>
-                    <div>&bull; <strong>Friday:</strong> Legs &amp; Core (Squats, RDLs &amp; Abs)</div>
-                  </div>
-                  <div style="font-size: 11px; color: #94a3b8;">12 compound &amp; isolation movements for maximum recovery and growth.</div>
-                </div>
-                <form method="post" onsubmit="return confirm('Apply Push / Pull / Legs (3-Day Split)? This replaces your current schedule.');" style="margin-top: 14px;">
-                  <?php echo csrf_input(); ?>
-                  <input type="hidden" name="action" value="apply_workout_template">
-                  <input type="hidden" name="template_type" value="ppl">
-                  <button type="submit" class="ios-btn ios-btn-primary" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%;">
-                    Apply PPL Split
-                  </button>
-                </form>
+          <!-- Controls Toolbar: Search, Filters & Action Buttons -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px 18px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 280px;">
+              <div style="position: relative; max-width: 300px; width: 100%;">
+                <input type="text" id="presetSearchInput" class="ios-input" placeholder="Search presets by title, tag, or muscle..." oninput="filterPresetCards()" style="padding-left: 34px; font-size: 12.5px; height: 38px;">
+                <i class="fa fa-search" style="position: absolute; left: 12px; top: 12px; color: #64748b; font-size: 13px;"></i>
+              </div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="preset-filter-chip active" id="chipPresetAll" onclick="setPresetFilter('all', this)" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; border: 1px solid rgba(56,189,248,0.4); background: rgba(56,189,248,0.18); color: #38bdf8; font-weight: 700; cursor: pointer;">
+                  All Presets (<?php echo count($systemWorkoutPresets) + count($userWorkoutPresets); ?>)
+                </button>
+                <button type="button" class="preset-filter-chip" id="chipPresetSystem" onclick="setPresetFilter('system', this)" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: #cbd5e1; font-weight: 600; cursor: pointer;">
+                  <i class="fa fa-certificate" style="color: #fbbf24; margin-right: 4px;"></i> Verified System (<?php echo count($systemWorkoutPresets); ?>)
+                </button>
+                <button type="button" class="preset-filter-chip" id="chipPresetCustom" onclick="setPresetFilter('custom', this)" style="padding: 6px 14px; font-size: 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: #cbd5e1; font-weight: 600; cursor: pointer;">
+                  <i class="fa fa-user" style="color: #34d399; margin-right: 4px;"></i> My Custom (<span id="userPresetsCountBadge"><?php echo count($userWorkoutPresets); ?></span>)
+                </button>
               </div>
             </div>
-
-            <!-- Split 2: Upper / Lower -->
-            <div class="col-md-6 mb-3">
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(251,191,36,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #fff; font-size: 16px;">Upper / Lower Split</strong>
-                    <span class="ios-badge" style="background: rgba(251,191,36,0.15); color: #fbbf24; font-size: 11px;">4-Day Power</span>
-                  </div>
-                  <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
-                    <div>&bull; <strong>Mon &amp; Thu:</strong> Upper Body (Chest, Back, OHP &amp; Lats)</div>
-                    <div>&bull; <strong>Tue &amp; Fri:</strong> Lower Body (Squats, RDLs, Calves &amp; Core)</div>
-                    <div>&bull; <strong>Wed, Sat, Sun:</strong> Rest &amp; Active Recovery</div>
-                  </div>
-                  <div style="font-size: 11px; color: #94a3b8;">High frequency split allowing 2x per week muscle stimulus.</div>
-                </div>
-                <form method="post" onsubmit="return confirm('Apply Upper / Lower (4-Day Split)? This replaces your current schedule.');" style="margin-top: 14px;">
-                  <?php echo csrf_input(); ?>
-                  <input type="hidden" name="action" value="apply_workout_template">
-                  <input type="hidden" name="template_type" value="upper_lower">
-                  <button type="submit" class="ios-btn" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%; background: #fbbf24; color: #04101e; font-weight: 700;">
-                    Apply Upper / Lower Split
-                  </button>
-                </form>
-              </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-sm btn-outline-warning" onclick="openSaveCurrentAsPresetModal()" style="border-radius: 9px; padding: 7px 14px; font-size: 12px; background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.3); color: #fbbf24; font-weight: 700; cursor: pointer;">
+                <i class="fa fa-floppy-o" style="margin-right: 5px;"></i> Save Current Schedule
+              </button>
+              <button type="button" class="ios-btn ios-btn-primary" onclick="openCreatePresetModal()" style="border-radius: 9px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                <i class="fa fa-plus-circle" style="margin-right: 5px;"></i> + Create New Preset
+              </button>
             </div>
+          </div>
 
-            <!-- Split 3: Full Body Circuit -->
-            <div class="col-md-6 mb-3">
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(52,211,153,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #fff; font-size: 16px;">Full Body Circuit</strong>
-                    <span class="ios-badge ios-badge-success" style="font-size: 11px;">3-Day Conditioning</span>
+          <!-- Presets Grid Container -->
+          <div class="row" id="presetsCardsGrid">
+            <!-- 1. User Custom Presets -->
+            <?php foreach ($userWorkoutPresets as $up): ?>
+              <?php 
+                $upExCount = count($up['exercises']);
+                $upDaysCount = $up['days_count'] ?: count(array_unique(array_column($up['exercises'], 'day')));
+              ?>
+              <div class="col-md-6 col-lg-4 mb-3 preset-item" data-type="custom" data-search="<?php echo htmlspecialchars(strtolower($up['title'] . ' ' . $up['tag'] . ' ' . $up['difficulty'] . ' ' . $up['description'])); ?>">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(52,211,153,0.35); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                      <div>
+                        <span class="ios-badge" style="background: rgba(52,211,153,0.15); color: #34d399; font-size: 10.5px; margin-bottom: 4px; display: inline-block;">
+                          <i class="fa fa-user"></i> My Custom Split
+                        </span>
+                        <h5 style="color: #fff; font-size: 16px; font-weight: 800; margin: 0; line-height: 1.3;">
+                          <?php echo htmlspecialchars($up['title']); ?>
+                        </h5>
+                      </div>
+                      <span class="ios-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1; font-size: 10px;">
+                        <?php echo htmlspecialchars($up['difficulty'] ?: 'Intermediate'); ?>
+                      </span>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                      <span style="font-size: 11px; background: rgba(56,189,248,0.1); color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-weight: 600;">
+                        <i class="fa fa-calendar-check-o"></i> <?php echo $upDaysCount; ?> Active Days
+                      </span>
+                      <span style="font-size: 11px; background: rgba(251,191,36,0.1); color: #fbbf24; padding: 3px 8px; border-radius: 6px; font-weight: 600;">
+                        <i class="fa fa-list"></i> <?php echo $upExCount; ?> Exercises
+                      </span>
+                      <span style="font-size: 11px; background: rgba(255,255,255,0.05); color: #94a3b8; padding: 3px 8px; border-radius: 6px;">
+                        <?php echo htmlspecialchars($up['tag'] ?: 'Custom Split'); ?>
+                      </span>
+                    </div>
+
+                    <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin: 0 0 14px; min-height: 36px;">
+                      <?php echo htmlspecialchars($up['description'] ?: 'Personal training split tailored to your weekly goals.'); ?>
+                    </p>
                   </div>
-                  <div style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
-                    <div>&bull; <strong>Mon, Wed, Fri:</strong> Total Body Workouts</div>
-                    <div>&bull; Squats, Bench, Deadlifts &amp; Core integrated</div>
+
+                  <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 6px;">
+                      <button type="button" class="btn btn-sm btn-outline-info w-50" onclick="previewPreset(<?php echo $up['id']; ?>)" style="border-radius: 8px; font-size: 11.5px; padding: 6px; cursor: pointer;">
+                        <i class="fa fa-eye"></i> Preview
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-light w-50" onclick="openEditPresetModal(<?php echo $up['id']; ?>)" style="border-radius: 8px; font-size: 11.5px; padding: 6px; cursor: pointer; background: rgba(255,255,255,0.05);">
+                        <i class="fa fa-pencil"></i> Edit Split
+                      </button>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                      <form method="post" onsubmit="return confirm('Apply \'<?php echo addslashes($up['title']); ?>\' to your weekly routine? This will replace your current schedule.');" style="flex: 1; margin: 0;">
+                        <?php echo csrf_input(); ?>
+                        <input type="hidden" name="action" value="apply_workout_template">
+                        <input type="hidden" name="template_type" value="<?php echo $up['id']; ?>">
+                        <button type="submit" class="ios-btn ios-btn-primary w-100" style="padding: 7px; font-size: 12px; border-radius: 8px; cursor: pointer;">
+                          <i class="fa fa-check-circle"></i> Apply Split
+                        </button>
+                      </form>
+                      <form method="post" onsubmit="return confirm('Delete this custom split preset? This cannot be undone.');" style="margin: 0;">
+                        <?php echo csrf_input(); ?>
+                        <input type="hidden" name="action" value="delete_custom_preset">
+                        <input type="hidden" name="preset_id" value="<?php echo $up['id']; ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 8px; padding: 7px 10px; font-size: 12px; cursor: pointer;">
+                          <i class="fa fa-trash-o"></i>
+                        </button>
+                      </form>
+                    </div>
                   </div>
-                  <div style="font-size: 11px; color: #94a3b8;">Great for busy schedules, functional stamina, and elevated metabolic rate.</div>
                 </div>
-                <form method="post" onsubmit="return confirm('Apply Full Body Circuit (3-Day Split)? This replaces your current schedule.');" style="margin-top: 14px;">
-                  <?php echo csrf_input(); ?>
-                  <input type="hidden" name="action" value="apply_workout_template">
-                  <input type="hidden" name="template_type" value="full_body">
-                  <button type="submit" class="ios-btn" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%; background: #34d399; color: #04101e; font-weight: 700;">
-                    Apply Full Body Split
-                  </button>
-                </form>
               </div>
-            </div>
+            <?php endforeach; ?>
 
-            <!-- Reset Routine -->
-            <div class="col-md-6 mb-3">
+            <!-- 2. Verified System Presets -->
+            <?php foreach ($systemWorkoutPresets as $slug => $sp): ?>
+              <?php 
+                $spExCount = count($sp['exercises']);
+                $spDaysCount = $sp['days_count'] ?: 3;
+              ?>
+              <div class="col-md-6 col-lg-4 mb-3 preset-item" data-type="system" data-search="<?php echo htmlspecialchars(strtolower($sp['title'] . ' ' . $sp['tag'] . ' ' . $sp['difficulty'] . ' ' . $sp['description'])); ?>">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid <?php echo $sp['border_color']; ?>; border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                      <div>
+                        <span class="ios-badge" style="background: <?php echo $sp['badge_bg']; ?>; color: <?php echo $sp['badge_color']; ?>; font-size: 10.5px; margin-bottom: 4px; display: inline-block;">
+                          <i class="fa fa-certificate"></i> Verified System
+                        </span>
+                        <h5 style="color: #fff; font-size: 16px; font-weight: 800; margin: 0; line-height: 1.3;">
+                          <?php echo htmlspecialchars($sp['title']); ?>
+                        </h5>
+                      </div>
+                      <span class="ios-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1; font-size: 10px;">
+                        <?php echo htmlspecialchars($sp['difficulty']); ?>
+                      </span>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                      <span style="font-size: 11px; background: rgba(56,189,248,0.1); color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-weight: 600;">
+                        <i class="fa fa-calendar-check-o"></i> <?php echo $spDaysCount; ?> Days
+                      </span>
+                      <span style="font-size: 11px; background: rgba(251,191,36,0.1); color: #fbbf24; padding: 3px 8px; border-radius: 6px; font-weight: 600;">
+                        <i class="fa fa-list"></i> <?php echo $spExCount; ?> Movements
+                      </span>
+                      <span style="font-size: 11px; background: rgba(255,255,255,0.05); color: #94a3b8; padding: 3px 8px; border-radius: 6px;">
+                        <?php echo htmlspecialchars($sp['tag']); ?>
+                      </span>
+                    </div>
+
+                    <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin: 0 0 14px; min-height: 36px;">
+                      <?php echo htmlspecialchars($sp['description']); ?>
+                    </p>
+                  </div>
+
+                  <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-sm btn-outline-info w-50" onclick="previewPreset('<?php echo $slug; ?>')" style="border-radius: 8px; font-size: 12px; padding: 8px; cursor: pointer;">
+                      <i class="fa fa-eye"></i> Preview
+                    </button>
+                    <form method="post" onsubmit="return confirm('Apply \'<?php echo addslashes($sp['title']); ?>\'? This replaces your current weekly schedule.');" style="flex: 1; margin: 0;">
+                      <?php echo csrf_input(); ?>
+                      <input type="hidden" name="action" value="apply_workout_template">
+                      <input type="hidden" name="template_type" value="<?php echo $slug; ?>">
+                      <button type="submit" class="ios-btn w-100" style="padding: 8px; font-size: 12px; border-radius: 8px; background: <?php echo $sp['badge_color']; ?>; color: #04101e; font-weight: 700; cursor: pointer;">
+                        Apply Split
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            <?php endforeach; ?>
+
+            <!-- 3. Reset Routine Card -->
+            <div class="col-md-6 col-lg-4 mb-3 preset-item" data-type="system" data-search="clear reset empty clean schedule">
               <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(248,113,113,0.3); border-radius: 14px; padding: 18px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
                 <div>
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="color: #fff; font-size: 16px;">Clear Weekly Schedule</strong>
+                    <h5 style="color: #fff; font-size: 16px; font-weight: 800; margin: 0;">Clear Weekly Schedule</h5>
                     <span class="ios-badge ios-badge-danger" style="font-size: 11px;">Reset</span>
                   </div>
-                  <div style="font-size: 12.5px; color: #94a3b8; line-height: 1.6; margin-bottom: 12px;">
-                    Removes all scheduled exercises so you can organize your 7 days completely from scratch.
+                  <div style="font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 12px;">
+                    Removes all currently scheduled exercises so you can organize your 7-day schedule completely from a clean slate.
                   </div>
                 </div>
                 <form method="post" onsubmit="return confirm('Clear your entire weekly routine? You can re-add exercises or apply a preset anytime.');" style="margin-top: 14px;">
                   <?php echo csrf_input(); ?>
                   <input type="hidden" name="action" value="apply_workout_template">
                   <input type="hidden" name="template_type" value="clear">
-                  <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 9px; font-size: 12.5px; border-radius: 8px; width: 100%;">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 8px; font-size: 12px; border-radius: 8px; width: 100%; cursor: pointer;">
                     <i class="fa fa-trash-o"></i> Clear All Exercises
                   </button>
                 </form>
@@ -2647,6 +2850,188 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             Close
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Preset Preview Modal -->
+  <div class="modal fade" id="previewPresetModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content ios-modal">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 18px 24px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h4 class="modal-title" id="previewPresetTitle" style="font-weight: 800; font-size: 18px; color: #fff; margin: 0;"></h4>
+            <span id="previewPresetBadge" class="ios-badge" style="font-size: 11px;"></span>
+          </div>
+          <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('previewPresetModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <p id="previewPresetDesc" style="font-size: 13px; color: #94a3b8; margin-bottom: 16px;"></p>
+          <div id="previewPresetStats" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;"></div>
+          <div id="previewPresetDaysContainer" style="max-height: 480px; overflow-y: auto; padding-right: 4px;"></div>
+        </div>
+        <div class="modal-footer" style="padding: 14px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-outline-light" onclick="closeCustomModal('previewPresetModal'); openPresetSplitsModal();" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">
+            &larr; Back to Presets
+          </button>
+          <form method="post" id="previewApplyForm" onsubmit="return confirm('Apply this preset split? This replaces your current weekly schedule.');" style="margin: 0;">
+            <?php echo csrf_input(); ?>
+            <input type="hidden" name="action" value="apply_workout_template">
+            <input type="hidden" name="template_type" id="previewApplyType" value="">
+            <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer;">
+              <i class="fa fa-check"></i> Apply This Preset to Routine
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Current Schedule as Preset Modal -->
+  <div class="modal fade" id="saveCurrentAsPresetModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content ios-modal">
+        <form method="post" action="profile.php">
+          <?php echo csrf_input(); ?>
+          <input type="hidden" name="action" value="save_current_as_preset">
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 18px 24px;">
+            <h4 class="modal-title" style="font-weight: 800; font-size: 17px; color: #fff; margin: 0;">
+              <i class="fa fa-floppy-o" style="color: #fbbf24; margin-right: 8px;"></i> Save Current Schedule as Preset
+            </h4>
+            <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('saveCurrentAsPresetModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent; cursor: pointer;">&times;</button>
+          </div>
+          <div class="modal-body" style="padding: 24px;">
+            <div style="background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 12.5px; color: #94a3b8;">
+              <strong style="color: #38bdf8;"><i class="fa fa-info-circle"></i> Capturing Active Schedule:</strong><br>
+              Saving your <strong><?php echo $totalWeeklyExercises; ?> planned exercises</strong> across <strong><?php echo $activeWorkoutDaysCount; ?> training days</strong> as a reusable split preset.
+            </div>
+            <div class="ios-form-group">
+              <label class="ios-label">Preset Title <span style="color: #f87171;">*</span></label>
+              <input type="text" name="preset_title" class="ios-input" placeholder="e.g. My 4-Day Strength &amp; Shred Split" required>
+            </div>
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="ios-form-group">
+                  <label class="ios-label">Tag / Category</label>
+                  <input type="text" name="preset_tag" class="ios-input" placeholder="e.g. 4-Day Hypertrophy" value="Custom Split">
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="ios-form-group">
+                  <label class="ios-label">Difficulty Level</label>
+                  <select name="preset_difficulty" class="ios-input">
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate" selected>Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="ios-form-group">
+              <label class="ios-label">Description (Optional)</label>
+              <textarea name="preset_description" class="ios-input" rows="2" placeholder="Brief notes on goals, rest days, or tempo..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer" style="padding: 14px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-outline-light" data-dismiss="modal" onclick="closeCustomModal('saveCurrentAsPresetModal')" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">Cancel</button>
+            <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 20px; font-size: 13px; font-weight: 700;">
+              <i class="fa fa-floppy-o"></i> Save as Preset
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create & Edit Custom Split Preset Builder Modal -->
+  <div class="modal fade" id="customPresetBuilderModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document" style="max-width: 1100px;">
+      <div class="modal-content ios-modal">
+        <form method="post" id="customPresetBuilderForm" onsubmit="return handlePresetBuilderSubmit(event)">
+          <?php echo csrf_input(); ?>
+          <input type="hidden" name="action" id="builderAction" value="create_custom_preset">
+          <input type="hidden" name="preset_id" id="builderPresetId" value="0">
+          <input type="hidden" name="preset_exercises_json" id="builderExercisesJson" value="[]">
+
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 18px 24px;">
+            <h4 class="modal-title" id="builderModalTitle" style="font-weight: 800; font-size: 18px; color: #fff; margin: 0;">
+              <i class="fa fa-plus-circle" style="color: var(--color-primary); margin-right: 8px;"></i> Create New Split Preset
+            </h4>
+            <button type="button" class="close" data-dismiss="modal" onclick="closeCustomModal('customPresetBuilderModal')" style="color: #fff; opacity: 0.8; font-size: 24px; border: none; background: transparent; cursor: pointer;">&times;</button>
+          </div>
+          <div class="modal-body" style="padding: 24px; max-height: calc(85vh - 120px); overflow-y: auto;">
+            <!-- Metadata Fields -->
+            <div class="row">
+              <div class="col-md-5">
+                <div class="ios-form-group">
+                  <label class="ios-label">Split Preset Title <span style="color: #f87171;">*</span></label>
+                  <input type="text" name="preset_title" id="builderPresetTitle" class="ios-input" placeholder="e.g. Upper / Lower Hypertrophy Focus" required>
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-4">
+                <div class="ios-form-group">
+                  <label class="ios-label">Tag / Focus</label>
+                  <input type="text" name="preset_tag" id="builderPresetTag" class="ios-input" placeholder="e.g. 4-Day Strength, Power, PPL" value="Custom Split">
+                </div>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <div class="ios-form-group">
+                  <label class="ios-label">Difficulty</label>
+                  <select name="preset_difficulty" id="builderPresetDifficulty" class="ios-input">
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate" selected>Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="ios-form-group">
+              <label class="ios-label">Program Overview / Notes (Optional)</label>
+              <textarea name="preset_description" id="builderPresetDesc" class="ios-input" rows="2" placeholder="Describe the goal of this program, recovery recommendations, or progression model..."></textarea>
+            </div>
+
+            <!-- Interactive Movement Rows Builder -->
+            <div style="margin-top: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <h6 style="color: #fff; font-size: 14.5px; font-weight: 700; margin: 0;">
+                    <i class="fa fa-list-ol" style="color: #38bdf8; margin-right: 6px;"></i> Program Exercises &amp; Schedule
+                  </h6>
+                  <span style="font-size: 11.5px; color: #94a3b8;">Add exercises across training days. Use autocomplete from the 386-movement gym library.</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="addPresetBuilderRow()" style="border-radius: 8px; font-size: 12px; padding: 6px 14px; cursor: pointer;">
+                  <i class="fa fa-plus"></i> Add Exercise Row
+                </button>
+              </div>
+
+              <div class="table-responsive" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(0,0,0,0.2);">
+                <table class="table table-dark table-sm mb-0" style="background: transparent; font-size: 12.5px;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.12); color: #94a3b8; font-size: 11px; text-transform: uppercase;">
+                      <th style="width: 14%; padding: 10px;">Day of Week</th>
+                      <th style="width: 16%; padding: 10px;">Target Muscle</th>
+                      <th style="width: 28%; padding: 10px;">Exercise Name</th>
+                      <th style="width: 10%; padding: 10px;">Sets</th>
+                      <th style="width: 12%; padding: 10px;">Target Reps</th>
+                      <th style="width: 15%; padding: 10px;">Form Cue / Notes</th>
+                      <th style="width: 5%; text-align: center; padding: 10px;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="builderExercisesTbody">
+                    <!-- Populated dynamically via JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer" style="padding: 14px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-outline-light" data-dismiss="modal" onclick="closeCustomModal('customPresetBuilderModal')" style="border-radius: 8px; color: #94a3b8; border-color: rgba(255,255,255,0.15); cursor: pointer;">Cancel</button>
+            <button type="submit" class="ios-btn ios-btn-primary" style="padding: 8px 24px; font-size: 13px; font-weight: 700;">
+              <i class="fa fa-check"></i> Save Split Preset
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -2903,8 +3288,240 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       showModalSafe('editWorkoutModal');
     }
 
+    // Master System & User Presets Databases
+    const systemWorkoutPresets = <?php echo json_encode($systemWorkoutPresets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const userWorkoutPresets = <?php echo json_encode($userWorkoutPresets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
+    let activePresetCategory = 'all';
+
     function openPresetSplitsModal() {
       showModalSafe('presetSplitsModal');
+    }
+
+    function openSaveCurrentAsPresetModal() {
+      hideModalSafe('presetSplitsModal');
+      showModalSafe('saveCurrentAsPresetModal');
+    }
+
+    function setPresetFilter(cat, btn) {
+      activePresetCategory = cat;
+      document.querySelectorAll('.preset-filter-chip').forEach(function(c) {
+        c.classList.remove('active');
+        c.style.background = 'rgba(255,255,255,0.04)';
+        c.style.borderColor = 'rgba(255,255,255,0.1)';
+        c.style.color = '#cbd5e1';
+      });
+      if (btn) {
+        btn.classList.add('active');
+        btn.style.background = 'rgba(56,189,248,0.18)';
+        btn.style.borderColor = 'rgba(56,189,248,0.4)';
+        btn.style.color = '#38bdf8';
+      }
+      filterPresetCards();
+    }
+
+    function filterPresetCards() {
+      const q = (document.getElementById('presetSearchInput').value || '').toLowerCase().trim();
+      document.querySelectorAll('#presetsCardsGrid .preset-item').forEach(function(item) {
+        const type = item.getAttribute('data-type');
+        const text = (item.getAttribute('data-search') || '').toLowerCase();
+        let matchesType = (activePresetCategory === 'all') || (type === activePresetCategory);
+        let matchesQuery = !q || text.includes(q);
+        item.style.display = (matchesType && matchesQuery) ? '' : 'none';
+      });
+    }
+
+    function previewPreset(identifier) {
+      let preset = null;
+      if (typeof identifier === 'number' || (!isNaN(Number(identifier)) && String(identifier).trim() !== '')) {
+        preset = userWorkoutPresets.find(function(p) { return String(p.id) === String(identifier); });
+      } else {
+        preset = systemWorkoutPresets[identifier];
+      }
+      if (!preset) return;
+
+      document.getElementById('previewPresetTitle').textContent = preset.title || 'Workout Split';
+      const badge = document.getElementById('previewPresetBadge');
+      badge.textContent = preset.tag || (preset.is_system ? 'Verified Program' : 'Custom Split');
+      badge.style.background = preset.badge_bg || 'rgba(56,189,248,0.15)';
+      badge.style.color = preset.badge_color || '#38bdf8';
+
+      document.getElementById('previewPresetDesc').textContent = preset.description || 'Structured workout split designed for continuous athletic progress.';
+      document.getElementById('previewApplyType').value = identifier;
+
+      const exercises = preset.exercises || [];
+      const daysCount = preset.days_count || (new Set(exercises.map(function(e) { return e.day; }))).size;
+      const diff = preset.difficulty || 'Intermediate';
+
+      document.getElementById('previewPresetStats').innerHTML = 
+        '<span style="font-size: 11.5px; background: rgba(56,189,248,0.1); color: #38bdf8; padding: 4px 10px; border-radius: 8px; font-weight: 600;"><i class="fa fa-calendar"></i> ' + daysCount + ' Training Days</span>' +
+        '<span style="font-size: 11.5px; background: rgba(251,191,36,0.1); color: #fbbf24; padding: 4px 10px; border-radius: 8px; font-weight: 600;"><i class="fa fa-list"></i> ' + exercises.length + ' Total Movements</span>' +
+        '<span style="font-size: 11.5px; background: rgba(255,255,255,0.06); color: #cbd5e1; padding: 4px 10px; border-radius: 8px;"><i class="fa fa-tachometer"></i> ' + diff + '</span>';
+
+      // Group exercises by day
+      const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const byDay = {};
+      exercises.forEach(function(ex) {
+        const d = ex.day || 'Monday';
+        if (!byDay[d]) byDay[d] = [];
+        byDay[d].push(ex);
+      });
+
+      let daysHtml = '';
+      daysOrder.forEach(function(day) {
+        if (!byDay[day] || byDay[day].length === 0) return;
+        daysHtml += '<div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 14px; overflow: hidden;">' +
+          '<div style="background: rgba(255,255,255,0.05); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06);">' +
+            '<strong style="color: #fff; font-size: 13.5px;"><i class="fa fa-calendar-o" style="color: #38bdf8; margin-right: 6px;"></i> ' + day + '</strong>' +
+            '<span style="font-size: 11.5px; color: #94a3b8;">' + byDay[day].length + ' exercises</span>' +
+          '</div>' +
+          '<div style="padding: 10px 16px;">';
+
+        byDay[day].forEach(function(ex, idx) {
+          daysHtml += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 0;' + (idx < byDay[day].length - 1 ? ' border-bottom: 1px solid rgba(255,255,255,0.04);' : '') + '">' +
+            '<div>' +
+              '<div style="color: #fff; font-weight: 600; font-size: 13px;">' + (ex.name || 'Exercise') + '</div>' +
+              '<small style="color: #94a3b8; font-size: 11px;">' + (ex.muscle ? ex.muscle + ' &bull; ' : '') + (ex.notes || '') + '</small>' +
+            '</div>' +
+            '<div style="text-align: right;">' +
+              '<span style="font-size: 12px; color: #38bdf8; font-weight: 700;">' + (ex.sets || 3) + ' sets</span>' +
+              '<span style="font-size: 11.5px; color: #cbd5e1; margin-left: 6px;">(' + (ex.reps || '10-12 reps') + ')</span>' +
+            '</div>' +
+          '</div>';
+        });
+
+        daysHtml += '</div></div>';
+      });
+
+      document.getElementById('previewPresetDaysContainer').innerHTML = daysHtml || '<p style="color: #94a3b8;">No exercises scheduled for this split.</p>';
+
+      hideModalSafe('presetSplitsModal');
+      showModalSafe('previewPresetModal');
+    }
+
+    function openCreatePresetModal() {
+      document.getElementById('builderAction').value = 'create_custom_preset';
+      document.getElementById('builderPresetId').value = '0';
+      document.getElementById('builderModalTitle').innerHTML = '<i class="fa fa-plus-circle" style="color: var(--color-primary); margin-right: 8px;"></i> Create New Split Preset';
+      document.getElementById('builderPresetTitle').value = '';
+      document.getElementById('builderPresetTag').value = 'Custom Split';
+      document.getElementById('builderPresetDifficulty').value = 'Intermediate';
+      document.getElementById('builderPresetDesc').value = '';
+
+      const tbody = document.getElementById('builderExercisesTbody');
+      tbody.innerHTML = '';
+      // Seed 3 initial rows for smooth user start
+      addPresetBuilderRow('Monday', 'Chest', '', 4, '8-10 reps', '');
+      addPresetBuilderRow('Wednesday', 'Back', '', 4, '8-10 reps', '');
+      addPresetBuilderRow('Friday', 'Legs', '', 4, '8-10 reps', '');
+
+      hideModalSafe('presetSplitsModal');
+      showModalSafe('customPresetBuilderModal');
+    }
+
+    function openEditPresetModal(presetId) {
+      const preset = userWorkoutPresets.find(function(p) { return String(p.id) === String(presetId); });
+      if (!preset) return;
+
+      document.getElementById('builderAction').value = 'edit_custom_preset';
+      document.getElementById('builderPresetId').value = preset.id;
+      document.getElementById('builderModalTitle').innerHTML = '<i class="fa fa-pencil" style="color: #fbbf24; margin-right: 8px;"></i> Edit Custom Split: ' + (preset.title || '');
+      document.getElementById('builderPresetTitle').value = preset.title || '';
+      document.getElementById('builderPresetTag').value = preset.tag || 'Custom Split';
+      document.getElementById('builderPresetDifficulty').value = preset.difficulty || 'Intermediate';
+      document.getElementById('builderPresetDesc').value = preset.description || '';
+
+      const tbody = document.getElementById('builderExercisesTbody');
+      tbody.innerHTML = '';
+      const exs = preset.exercises || [];
+      if (exs.length === 0) {
+        addPresetBuilderRow('Monday', 'Chest', '', 3, '10-12 reps', '');
+      } else {
+        exs.forEach(function(ex) {
+          addPresetBuilderRow(ex.day || 'Monday', ex.muscle || 'Chest', ex.name || '', ex.sets || 3, ex.reps || '10-12 reps', ex.notes || '');
+        });
+      }
+
+      hideModalSafe('presetSplitsModal');
+      showModalSafe('customPresetBuilderModal');
+    }
+
+    function addPresetBuilderRow(day = 'Monday', muscle = 'Chest', name = '', sets = 3, reps = '10-12 reps', notes = '') {
+      const tbody = document.getElementById('builderExercisesTbody');
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+
+      tr.innerHTML = 
+        '<td style="padding: 6px;">' +
+          '<select class="ios-input row-day" style="font-size: 12px; padding: 6px 8px;">' +
+            '<option value="Monday"' + (day === 'Monday' ? ' selected' : '') + '>Monday</option>' +
+            '<option value="Tuesday"' + (day === 'Tuesday' ? ' selected' : '') + '>Tuesday</option>' +
+            '<option value="Wednesday"' + (day === 'Wednesday' ? ' selected' : '') + '>Wednesday</option>' +
+            '<option value="Thursday"' + (day === 'Thursday' ? ' selected' : '') + '>Thursday</option>' +
+            '<option value="Friday"' + (day === 'Friday' ? ' selected' : '') + '>Friday</option>' +
+            '<option value="Saturday"' + (day === 'Saturday' ? ' selected' : '') + '>Saturday</option>' +
+            '<option value="Sunday"' + (day === 'Sunday' ? ' selected' : '') + '>Sunday</option>' +
+          '</select>' +
+        '</td>' +
+        '<td style="padding: 6px;">' +
+          '<select class="ios-input row-muscle" style="font-size: 12px; padding: 6px 8px;">' +
+            '<option value="Chest"' + (muscle === 'Chest' ? ' selected' : '') + '>Chest</option>' +
+            '<option value="Back"' + (muscle === 'Back' ? ' selected' : '') + '>Back</option>' +
+            '<option value="Legs"' + (muscle === 'Legs' ? ' selected' : '') + '>Legs</option>' +
+            '<option value="Shoulders"' + (muscle === 'Shoulders' ? ' selected' : '') + '>Shoulders</option>' +
+            '<option value="Biceps"' + (muscle === 'Biceps' ? ' selected' : '') + '>Biceps</option>' +
+            '<option value="Triceps"' + (muscle === 'Triceps' ? ' selected' : '') + '>Triceps</option>' +
+            '<option value="Abs & Core"' + (muscle.includes('Abs') || muscle.includes('Core') ? ' selected' : '') + '>Abs & Core</option>' +
+            '<option value="Cardio"' + (muscle === 'Cardio' ? ' selected' : '') + '>Cardio</option>' +
+            '<option value="Functional & Mobility"' + (muscle.includes('Functional') ? ' selected' : '') + '>Functional</option>' +
+          '</select>' +
+        '</td>' +
+        '<td style="padding: 6px;">' +
+          '<input type="text" class="ios-input row-name" list="exerciseSuggestions" value="' + (name.replace(/"/g, '&quot;')) + '" placeholder="Type or select exercise..." style="font-size: 12px; padding: 6px 10px;" required>' +
+        '</td>' +
+        '<td style="padding: 6px;">' +
+          '<input type="number" class="ios-input row-sets" value="' + sets + '" min="1" max="10" style="font-size: 12px; padding: 6px 8px;" required>' +
+        '</td>' +
+        '<td style="padding: 6px;">' +
+          '<input type="text" class="ios-input row-reps" value="' + (reps.replace(/"/g, '&quot;')) + '" placeholder="e.g. 8-10 reps" style="font-size: 12px; padding: 6px 8px;" required>' +
+        '</td>' +
+        '<td style="padding: 6px;">' +
+          '<input type="text" class="ios-input row-notes" value="' + (notes.replace(/"/g, '&quot;')) + '" placeholder="Cues, cadence..." style="font-size: 12px; padding: 6px 8px;">' +
+        '</td>' +
+        '<td style="padding: 6px; text-align: center;">' +
+          '<button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest(\'tr\').remove()" style="padding: 4px 8px; border-radius: 6px;"><i class="fa fa-times"></i></button>' +
+        '</td>';
+
+      tbody.appendChild(tr);
+    }
+
+    function handlePresetBuilderSubmit(e) {
+      const rows = [];
+      const trs = document.querySelectorAll('#builderExercisesTbody tr');
+      trs.forEach(function(tr) {
+        const day = (tr.querySelector('.row-day') || {}).value || 'Monday';
+        const muscle = (tr.querySelector('.row-muscle') || {}).value || 'Chest';
+        const name = ((tr.querySelector('.row-name') || {}).value || '').trim();
+        const sets = parseInt((tr.querySelector('.row-sets') || {}).value || 3, 10);
+        const reps = ((tr.querySelector('.row-reps') || {}).value || '10-12 reps').trim();
+        const notes = ((tr.querySelector('.row-notes') || {}).value || '').trim();
+
+        if (name !== '') {
+          rows.push({ day: day, muscle: muscle, name: name, sets: sets, reps: reps, notes: notes });
+        }
+      });
+
+      if (rows.length === 0) {
+        alert('Please add at least one exercise movement to your split preset.');
+        if (e) e.preventDefault();
+        return false;
+      }
+
+      const jsonField = document.getElementById('builderExercisesJson');
+      if (jsonField) {
+        jsonField.value = JSON.stringify(rows);
+      }
+      return true;
     }
 
     function scrollToExerciseCatalog() {
