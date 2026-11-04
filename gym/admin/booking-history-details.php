@@ -21,33 +21,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } else {
         $payType = trim($_POST['payment_type'] ?? 'Cash');
         $amount = floatval($_POST['payment_amount'] ?? 0);
+        $txnRef = trim($_POST['transaction_ref'] ?? '');
+        $notes = trim($_POST['notes'] ?? '');
 
         if ($amount <= 0) {
             $err = "Please enter a valid payment amount greater than zero.";
         } else {
-            // 1. Insert into tblpayment
-            $payStmt = $dbh->prepare("INSERT INTO tblpayment (bookingID, paymentType, payment) VALUES (?, ?, ?)");
-            $payStmt->execute([$bookingId, $payType, $amount]);
+            try {
+                $dbh->beginTransaction();
 
-            // 2. Update tblbooking paymentType
-            $updBooking = $dbh->prepare("UPDATE tblbooking SET paymentType = ? WHERE id = ?");
-            $updBooking->execute([$payType, $bookingId]);
+                // 1. Insert into tblpayment with payment_method, transaction_ref, notes
+                $payStmt = $dbh->prepare("INSERT INTO tblpayment (bookingID, paymentType, payment, payment_method, transaction_ref, notes) VALUES (?, ?, ?, ?, ?, ?)");
+                $payStmt->execute([$bookingId, $payType, $amount, $payType, $txnRef, $notes]);
+                $newPayId = $dbh->lastInsertId();
 
-            // 3. Sync with tbl_memberships
-            $memStmt = $dbh->prepare("SELECT id, total_amount, paid_amount FROM tbl_memberships WHERE booking_id = ?");
-            $memStmt->execute([$bookingId]);
-            $mem = $memStmt->fetch(PDO::FETCH_ASSOC);
+                // 2. Update tblbooking paymentType
+                $updBooking = $dbh->prepare("UPDATE tblbooking SET paymentType = ? WHERE id = ?");
+                $updBooking->execute([$payType, $bookingId]);
 
-            if ($mem) {
-                $newPaid = floatval($mem['paid_amount']) + $amount;
-                $totAmt = floatval($mem['total_amount']);
-                $newStatus = ($newPaid >= $totAmt) ? 'paid' : 'partial';
+                // 3. Sync with tbl_memberships
+                $memStmt = $dbh->prepare("SELECT id, total_amount, paid_amount FROM tbl_memberships WHERE booking_id = ?");
+                $memStmt->execute([$bookingId]);
+                $mem = $memStmt->fetch(PDO::FETCH_ASSOC);
 
-                $updMem = $dbh->prepare("UPDATE tbl_memberships SET paid_amount = ?, payment_status = ? WHERE id = ?");
-                $updMem->execute([$newPaid, $newStatus, $mem['id']]);
+                if ($mem) {
+                    $newPaid = floatval($mem['paid_amount']) + $amount;
+                    $totAmt = floatval($mem['total_amount']);
+                    $newStatus = ($newPaid >= $totAmt) ? 'paid' : 'partial';
+
+                    $updMem = $dbh->prepare("UPDATE tbl_memberships SET paid_amount = ?, payment_status = ? WHERE id = ?");
+                    $updMem->execute([$newPaid, $newStatus, $mem['id']]);
+                }
+
+                $dbh->commit();
+                $msg = "Payment of " . format_currency($amount) . " successfully recorded.";
+            } catch (Exception $e) {
+                $dbh->rollBack();
+                $err = "Transaction Error: " . $e->getMessage();
             }
-
-            $msg = "Payment of " . format_currency($amount) . " successfully recorded.";
         }
     }
 }
@@ -221,7 +232,17 @@ $balance = max(0, $packagePrice - $totalPaid);
                 </select>
               </div>
 
-              <button type="submit" class="ios-btn ios-btn-accent btn-block" style="padding: 11px; border-radius: 12px;">
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">Transaction Reference / UTR #</label>
+                <input type="text" name="transaction_ref" class="form-control" placeholder="e.g. UPI-987123984, POS-0082" style="border-radius: 12px;">
+              </div>
+
+              <div class="form-group">
+                <label style="font-weight: 600; font-size: 13px;">Payment Notes</label>
+                <input type="text" name="notes" class="form-control" placeholder="Optional installment note..." style="border-radius: 12px;">
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block" style="padding: 11px; border-radius: 12px;">
                 <i class="fa fa-check"></i> Submit Payment
               </button>
             </form>
@@ -267,20 +288,21 @@ $balance = max(0, $packagePrice - $totalPaid);
             <h3 style="font-size: 18px; font-weight: 700; margin: 0;">
               <i class="fa fa-history" style="color: var(--color-primary); margin-right: 6px;"></i> Payment Installment History
             </h3>
-            <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()" style="border-radius: 10px; font-size: 12.5px;">
-              <i class="fa fa-print"></i> Print Statement
-            </button>
+            <a href="receipt.php?booking=<?php echo $bookingId; ?>" target="_blank" class="btn btn-outline-light btn-sm" style="border-radius: 10px; font-size: 12.5px;">
+              <i class="fa fa-print"></i> Official Full Receipt
+            </a>
           </div>
 
           <div class="table-responsive">
             <table class="table table-hover table-bordered" style="margin: 0;">
               <thead>
                 <tr>
-                  <th style="width: 50px;">#</th>
+                  <th style="width: 40px;">#</th>
                   <th>Receipt ID</th>
-                  <th>Payment Method</th>
+                  <th>Method</th>
                   <th>Amount</th>
-                  <th>Date & Time</th>
+                  <th>Date &amp; Time</th>
+                  <th style="text-align: right; width: 90px;">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -288,12 +310,22 @@ $balance = max(0, $packagePrice - $totalPaid);
                 <tr>
                   <td style="color: var(--text-muted);"><?php echo $idx++; ?></td>
                   <td style="font-weight: 600; color: var(--color-primary);">#REC-<?php echo $p['id']; ?></td>
-                  <td><span class="ios-badge ios-badge-info"><?php echo htmlspecialchars($p['paymentType'] ?? 'Cash'); ?></span></td>
+                  <td>
+                    <span class="ios-badge ios-badge-info"><?php echo htmlspecialchars($p['paymentType'] ?? 'Cash'); ?></span>
+                    <?php if (!empty($p['transaction_ref'])): ?>
+                      <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Ref: <?php echo htmlspecialchars($p['transaction_ref']); ?></div>
+                    <?php endif; ?>
+                  </td>
                   <td style="font-weight: 700; color: #34d399;"><?php echo format_currency($p['payment']); ?></td>
                   <td style="color: var(--text-muted); font-size: 13px;"><?php echo date('d M Y, h:i A', strtotime($p['payment_date'])); ?></td>
+                  <td style="text-align: right;">
+                    <a href="receipt.php?booking=<?php echo $bookingId; ?>&pay=<?php echo $p['id']; ?>" target="_blank" class="btn btn-sm btn-outline-info" style="border-radius: 8px; padding: 4px 8px; font-size: 11.5px;">
+                      <i class="fa fa-print"></i> Receipt
+                    </a>
+                  </td>
                 </tr>
                 <?php endforeach; else: ?>
-                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No payments recorded yet for this booking.</td></tr>
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No payments recorded yet for this booking.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>

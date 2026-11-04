@@ -61,6 +61,11 @@ if(strlen($_SESSION["uid"]) == 0) {
 						<span class="ios-badge" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--text-secondary);">
 							<?php echo htmlentities($result->category_name);?> &bull; <?php echo htmlentities($result->PackageName);?>
 						</span>
+						<div style="margin-top: 10px;">
+							<a href="receipt.php?booking=<?php echo $bookingid;?>" target="_blank" class="ios-btn ios-btn-glass" style="padding: 7px 14px; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+								<i class="fa fa-print"></i> Official Printable Receipt
+							</a>
+						</div>
 					</div>
 
 					<div style="text-align: right;">
