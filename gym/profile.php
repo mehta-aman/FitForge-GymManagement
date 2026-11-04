@@ -1448,7 +1448,8 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
                 <?php endif; ?>
               </div>
               <div>
-                <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 12px;" onclick="openAddWorkoutModal('<?php echo $day; ?>')">
+                <?php $suggestedMuscle = $hasExercises ? $exercises[0]['target_muscle'] : 'Chest'; ?>
+                <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 12px; cursor: pointer;" onclick="openAddWorkoutModal('<?php echo $day; ?>', '<?php echo addslashes($suggestedMuscle); ?>')">
                   <i class="fa fa-plus"></i> Add Exercise
                 </button>
               </div>
@@ -2338,28 +2339,6 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             <?php echo csrf_input(); ?>
             <input type="hidden" name="action" value="add_workout">
 
-            <div class="ios-form-group">
-              <label class="ios-label">Choose from Master Catalog (Auto-fills all details)</label>
-              <select id="catalogQuickSelect" class="ios-input" onchange="applyCatalogSelection(this.value)">
-                <option value="">-- Choose from 60+ Categorized Gym Exercises or Type Below --</option>
-                <?php
-                $groupedCatalog = [];
-                foreach ($masterExercises as $ex) {
-                    $groupedCatalog[$ex['category']][] = $ex;
-                }
-                foreach ($groupedCatalog as $catName => $catExercises):
-                ?>
-                  <optgroup label="<?php echo htmlspecialchars($catName); ?>">
-                    <?php foreach ($catExercises as $cEx): ?>
-                      <option value="<?php echo htmlspecialchars(json_encode($cEx)); ?>">
-                        <?php echo htmlspecialchars($cEx['name']); ?> (<?php echo htmlspecialchars($cEx['target_muscle']); ?>)
-                      </option>
-                    <?php endforeach; ?>
-                  </optgroup>
-                <?php endforeach; ?>
-              </select>
-            </div>
-
             <div class="row">
               <div class="col-sm-6">
                 <div class="ios-form-group">
@@ -2377,20 +2356,37 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               </div>
               <div class="col-sm-6">
                 <div class="ios-form-group">
-                  <label class="ios-label">Target Muscle Focus</label>
-                  <select name="target_muscle" id="addWorkoutMuscle" class="ios-input">
-                    <option value="Chest &amp; Triceps">Chest &amp; Triceps</option>
-                    <option value="Back &amp; Biceps">Back &amp; Biceps</option>
-                    <option value="Legs &amp; Core">Legs &amp; Core</option>
-                    <option value="Shoulders &amp; Arms">Shoulders &amp; Arms</option>
-                    <option value="Arms (Biceps &amp; Triceps)">Arms (Biceps &amp; Triceps)</option>
-                    <option value="Full Body Circuit">Full Body Circuit</option>
+                  <label class="ios-label">Target Muscle Focus <span style="color: #f87171;">*</span></label>
+                  <select name="target_muscle" id="addWorkoutMuscle" class="ios-input" onchange="filterModalExercisesByMuscle(this.value)" required>
+                    <option value="Chest" selected>Chest (Pectorals)</option>
+                    <option value="Back">Back (Lats, Traps &amp; Rhomboids)</option>
+                    <option value="Legs">Legs (Quads, Calves, Hamstrings &amp; Glutes)</option>
+                    <option value="Shoulders">Shoulders (Deltoids)</option>
+                    <option value="Biceps">Biceps &amp; Forearms</option>
+                    <option value="Triceps">Triceps</option>
                     <option value="Abs &amp; Core">Abs &amp; Core</option>
-                    <option value="Cardio / Conditioning">Cardio / Conditioning</option>
-                    <option value="Mobility &amp; Recovery">Mobility &amp; Recovery</option>
+                    <option value="Cardio">Cardio &amp; Conditioning</option>
+                    <option value="Functional &amp; Mobility">Functional &amp; Mobility</option>
+                    <option value="all">All Muscles (Show Complete 380+ Catalog)</option>
                   </select>
                 </div>
               </div>
+            </div>
+
+            <!-- Contextual Filtered Exercise Quick Selector (Shows only matching muscle exercises) -->
+            <div class="ios-form-group" style="background: rgba(56, 189, 248, 0.05); padding: 14px 16px; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="ios-label" style="margin: 0; color: #38bdf8; font-weight: 700;">
+                  <i class="fa fa-magic"></i> Exercise Selection (Filtered by Muscle)
+                </label>
+                <span id="catalogQuickCount" style="color: #38bdf8; font-size: 11.5px; font-weight: 700;"></span>
+              </div>
+              <select id="catalogQuickSelect" class="ios-input" onchange="applyCatalogSelection(this.value)" style="border-color: rgba(56,189,248,0.35);">
+                <!-- Populated dynamically by filterModalExercisesByMuscle() -->
+              </select>
+              <small style="color: #94a3b8; font-size: 11px; display: block; margin-top: 4px;">
+                Selecting an exercise above auto-populates exercise name, recommended sets, reps, and coaching cues below.
+              </small>
             </div>
 
             <div class="ios-form-group">
@@ -2463,10 +2459,34 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               </div>
               <div class="col-sm-6">
                 <div class="ios-form-group">
-                  <label class="ios-label">Target Muscle Focus</label>
-                  <input type="text" name="target_muscle" id="editWorkoutMuscle" class="ios-input" required>
+                  <label class="ios-label">Target Muscle Focus <span style="color: #f87171;">*</span></label>
+                  <select name="target_muscle" id="editWorkoutMuscle" class="ios-input" onchange="filterModalExercisesByMuscle(this.value, 'editCatalogQuickSelect', 'editCatalogQuickCount')" required>
+                    <option value="Chest">Chest (Pectorals)</option>
+                    <option value="Back">Back (Lats, Traps &amp; Rhomboids)</option>
+                    <option value="Legs">Legs (Quads, Hamstrings &amp; Calves)</option>
+                    <option value="Shoulders">Shoulders (Deltoids)</option>
+                    <option value="Biceps">Biceps &amp; Forearms</option>
+                    <option value="Triceps">Triceps</option>
+                    <option value="Abs &amp; Core">Abs &amp; Core</option>
+                    <option value="Cardio">Cardio &amp; Conditioning</option>
+                    <option value="Functional &amp; Mobility">Functional &amp; Mobility</option>
+                    <option value="all">All Muscles (Show Complete Catalog)</option>
+                  </select>
                 </div>
               </div>
+            </div>
+
+            <!-- Contextual Filtered Exercise Quick Selector for Edit -->
+            <div class="ios-form-group" style="background: rgba(56, 189, 248, 0.05); padding: 14px 16px; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="ios-label" style="margin: 0; color: #38bdf8; font-weight: 700;">
+                  <i class="fa fa-refresh"></i> Swap / Choose from Muscle Exercises
+                </label>
+                <span id="editCatalogQuickCount" style="color: #38bdf8; font-size: 11.5px; font-weight: 700;"></span>
+              </div>
+              <select id="editCatalogQuickSelect" class="ios-input" onchange="applyEditCatalogSelection(this.value)" style="border-color: rgba(56,189,248,0.35);">
+                <!-- Populated dynamically -->
+              </select>
             </div>
 
             <div class="ios-form-group">
@@ -2734,23 +2754,152 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
     function openCustomModal(modalId) { showModalSafe(modalId); }
     function closeCustomModal(modalId) { hideModalSafe(modalId); }
 
+    // Master Exercise Catalog client-side database (380+ exercises)
+    const masterExerciseCatalog = <?php echo json_encode($masterExercises, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
+    // Filter Modal Exercise Dropdown Contextually by Selected Muscle Group
+    function filterModalExercisesByMuscle(selectedMuscle, targetSelectId = 'catalogQuickSelect', countBadgeId = 'catalogQuickCount', customPreselectedEx = null) {
+      const select = document.getElementById(targetSelectId);
+      const countBadge = document.getElementById(countBadgeId);
+      if (!select || !masterExerciseCatalog) return;
+
+      select.innerHTML = '';
+      const rawTarget = (selectedMuscle || 'all').trim();
+      const normTarget = rawTarget.toLowerCase();
+
+      const filtered = masterExerciseCatalog.filter(function(ex) {
+        if (!rawTarget || rawTarget === 'all' || normTarget === 'all') return true;
+        const mg = ex.muscle_group || '';
+        const mgLower = mg.toLowerCase();
+
+        // Exact match
+        if (mgLower === normTarget || mg === rawTarget) return true;
+
+        // Strict category segregation
+        if (normTarget === 'chest') return mgLower === 'chest';
+        if (normTarget === 'back') return mgLower === 'back';
+        if (normTarget === 'legs' || normTarget === 'leg') return mgLower === 'legs';
+        if (normTarget === 'shoulders' || normTarget === 'shoulder') return mgLower === 'shoulders';
+        if (normTarget === 'biceps' || normTarget === 'bicep') return mgLower === 'biceps';
+        if (normTarget === 'triceps' || normTarget === 'tricep') return mgLower === 'triceps';
+        if (normTarget.includes('abs') || normTarget.includes('core')) return mgLower === 'abs & core';
+        if (normTarget.includes('cardio')) return mgLower === 'cardio';
+        if (normTarget.includes('functional') || normTarget.includes('mobility')) return mgLower === 'functional & mobility';
+
+        // Multi-muscle split support (e.g. "Chest & Triceps")
+        if (normTarget.includes('&') || normTarget.includes('/')) {
+          const parts = normTarget.split(/[&/+,]/).map(s => s.trim());
+          for (const p of parts) {
+            if (p && mgLower.includes(p)) return true;
+          }
+        }
+
+        return mgLower.includes(normTarget);
+      });
+
+      // Default placeholder option
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      const displayTitle = (selectedMuscle === 'all' || !selectedMuscle) ? 'All Categories' : selectedMuscle + ' Exercises';
+      defaultOpt.textContent = '-- Select from ' + filtered.length + ' ' + displayTitle + ' --';
+      select.appendChild(defaultOpt);
+
+      // Group exercises by category (Barbell, Dumbbells, Machines, Floor, etc.)
+      const groups = {};
+      filtered.forEach(function(ex) {
+        const cat = ex.category || 'General Exercises';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(ex);
+      });
+
+      for (const catName in groups) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = catName + ' (' + groups[catName].length + ')';
+        groups[catName].forEach(function(ex) {
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify(ex);
+          opt.textContent = ex.name + ' • ' + ex.target_muscle + ' (' + ex.recommended_sets + 's × ' + ex.recommended_reps + ')';
+          if (customPreselectedEx && ex.name === customPreselectedEx) {
+            opt.selected = true;
+          }
+          optgroup.appendChild(opt);
+        });
+        select.appendChild(optgroup);
+      }
+
+      if (countBadge) {
+        countBadge.textContent = filtered.length + ' ' + (selectedMuscle === 'all' ? 'Total' : selectedMuscle) + ' Available';
+      }
+
+      // Update autocomplete datalist
+      const datalist = document.getElementById('exerciseSuggestions');
+      if (datalist && targetSelectId === 'catalogQuickSelect') {
+        datalist.innerHTML = '';
+        filtered.forEach(function(ex) {
+          const dOpt = document.createElement('option');
+          dOpt.value = ex.name;
+          dOpt.label = ex.target_muscle + ' (' + ex.equipment + ')';
+          datalist.appendChild(dOpt);
+        });
+      }
+    }
+
     // Routine Planner Modal & Filter Functions
-    function openAddWorkoutModal(day) {
+    function openAddWorkoutModal(day, suggestedMuscle) {
       if (day) {
         const d = document.getElementById('addWorkoutDay');
         if (d) d.value = day;
       }
+
+      const mSelect = document.getElementById('addWorkoutMuscle');
+      let targetM = suggestedMuscle || (mSelect ? mSelect.value : 'Chest');
+      if (!targetM) targetM = 'Chest';
+
+      if (mSelect) {
+        let matched = false;
+        for (let i = 0; i < mSelect.options.length; i++) {
+          if (mSelect.options[i].value.toLowerCase() === targetM.toLowerCase() ||
+              targetM.toLowerCase().includes(mSelect.options[i].value.toLowerCase())) {
+            mSelect.selectedIndex = i;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          mSelect.value = 'Chest';
+        }
+        filterModalExercisesByMuscle(mSelect.value, 'catalogQuickSelect', 'catalogQuickCount');
+      }
+
       showModalSafe('addWorkoutModal');
     }
 
     function openEditWorkoutModal(id, day, muscle, name, sets, reps, notes) {
       document.getElementById('editWorkoutId').value = id || '';
       document.getElementById('editWorkoutDay').value = day || 'Monday';
-      document.getElementById('editWorkoutMuscle').value = muscle || '';
       document.getElementById('editWorkoutName').value = name || '';
       document.getElementById('editWorkoutSets').value = sets || 3;
       document.getElementById('editWorkoutReps').value = reps || '10-12 reps';
       document.getElementById('editWorkoutNotes').value = notes || '';
+
+      const mSelect = document.getElementById('editWorkoutMuscle');
+      let targetM = muscle || 'Chest';
+      if (mSelect) {
+        let matched = false;
+        for (let i = 0; i < mSelect.options.length; i++) {
+          if (mSelect.options[i].value.toLowerCase() === targetM.toLowerCase() ||
+              targetM.toLowerCase().includes(mSelect.options[i].value.toLowerCase())) {
+            mSelect.selectedIndex = i;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          mSelect.value = 'Chest';
+        }
+        filterModalExercisesByMuscle(mSelect.value, 'editCatalogQuickSelect', 'editCatalogQuickCount', name);
+      }
+
       showModalSafe('editWorkoutModal');
     }
 
@@ -2771,11 +2920,53 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
     // Quick Add from Master Exercise Catalog to Routine Modal
     function quickAddFromCatalog(name, muscle, sets, reps, formCue) {
       document.getElementById('addWorkoutName').value = name || '';
-      document.getElementById('addWorkoutMuscle').value = muscle || '';
       document.getElementById('addWorkoutSets').value = sets || 3;
       document.getElementById('addWorkoutReps').value = reps || '10-12 reps';
       document.getElementById('addWorkoutNotes').value = formCue || '';
+
+      const mSelect = document.getElementById('addWorkoutMuscle');
+      if (mSelect && muscle) {
+        for (let i = 0; i < mSelect.options.length; i++) {
+          if (mSelect.options[i].value.toLowerCase() === muscle.toLowerCase() ||
+              muscle.toLowerCase().includes(mSelect.options[i].value.toLowerCase())) {
+            mSelect.selectedIndex = i;
+            break;
+          }
+        }
+        filterModalExercisesByMuscle(mSelect.value, 'catalogQuickSelect', 'catalogQuickCount', name);
+      } else if (mSelect) {
+        filterModalExercisesByMuscle(mSelect.value, 'catalogQuickSelect', 'catalogQuickCount', name);
+      }
+
       showModalSafe('addWorkoutModal');
+    }
+
+    // Auto-fill from catalog dropdown in Add Modal
+    function applyCatalogSelection(rawJson) {
+      if (!rawJson) return;
+      try {
+        const ex = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+        document.getElementById('addWorkoutName').value = ex.name || '';
+        document.getElementById('addWorkoutSets').value = ex.recommended_sets || 3;
+        document.getElementById('addWorkoutReps').value = ex.recommended_reps || '10-12 reps';
+        document.getElementById('addWorkoutNotes').value = ex.form_cue || '';
+      } catch (e) {
+        console.error('Error parsing catalog exercise:', e);
+      }
+    }
+
+    // Auto-fill from catalog dropdown in Edit Modal
+    function applyEditCatalogSelection(rawJson) {
+      if (!rawJson) return;
+      try {
+        const ex = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+        document.getElementById('editWorkoutName').value = ex.name || '';
+        document.getElementById('editWorkoutSets').value = ex.recommended_sets || 3;
+        document.getElementById('editWorkoutReps').value = ex.recommended_reps || '10-12 reps';
+        document.getElementById('editWorkoutNotes').value = ex.form_cue || '';
+      } catch (e) {
+        console.error('Error parsing catalog exercise in edit:', e);
+      }
     }
 
     // Global backdrop, dismiss button, and Escape key listeners
