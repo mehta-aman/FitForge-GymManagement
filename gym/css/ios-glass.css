@@ -735,7 +735,9 @@ body {
   box-shadow: -20px 0 50px rgba(0, 0, 0, 0.6);
   z-index: 1050;
   transform: translate3d(100%, 0, 0);
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.4s;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -745,6 +747,8 @@ body {
 
 .ios-mobile-drawer.active {
   transform: translate3d(0, 0, 0);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .ios-drawer-header {

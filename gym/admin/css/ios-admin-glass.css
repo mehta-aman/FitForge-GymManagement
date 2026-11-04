@@ -1,11 +1,13 @@
 @import url('../../css/ios-glass.css');
 
 /* Admin Layout Overrides */
-body.app, .app {
+html, body.app, .app {
   background-color: var(--bg-deep) !important;
   color: var(--text-white) !important;
   font-family: var(--font-family) !important;
   min-height: 100vh;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
 }
 
 /* Admin Top Bar */
@@ -190,13 +192,31 @@ body.app, .app {
 }
 
 /* Main Content Area */
-.app-content {
-  margin-left: 250px;
-  margin-top: 64px;
-  padding: 32px 36px !important;
-  background: transparent !important;
-  position: relative;
-  z-index: 1;
+@media (min-width: 768px) {
+  .app-content {
+    margin-left: 250px;
+    margin-top: 64px;
+    padding: 32px 36px !important;
+    background: transparent !important;
+    position: relative;
+    z-index: 1;
+    min-height: calc(100vh - 64px);
+    max-width: calc(100vw - 250px);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-content {
+    margin-left: 0 !important;
+    margin-top: 56px !important;
+    padding: 16px 14px 85px !important;
+    background: transparent !important;
+    position: relative;
+    z-index: 1;
+    max-width: 100vw !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+  }
 }
 
 .app-title {
@@ -483,4 +503,210 @@ body.app, .app {
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
   border: none !important;
   border-radius: 14px !important;
+}
+
+/* ==============================================================================
+   RESPONSIVE MOBILE & TABLET SYSTEM (< 768px)
+   ============================================================================== */
+
+@media (min-width: 768px) {
+  .app-sidebar {
+    position: fixed !important;
+    top: 64px !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 250px !important;
+    transform: none !important;
+    z-index: 1020 !important;
+  }
+  .app-mobile-dock {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Header Adjustments */
+  .app-header {
+    height: 56px !important;
+    padding: 0 12px !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  .app-sidebar__toggle {
+    line-height: 56px !important;
+    padding: 0 10px !important;
+  }
+
+  .app-header__logo {
+    font-size: 14px !important;
+    max-width: 145px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0 4px !important;
+    gap: 6px !important;
+    flex: 0 1 auto !important;
+  }
+
+  .app-header__logo-img {
+    max-height: 28px !important;
+    max-width: 55px !important;
+  }
+
+  .app-nav {
+    gap: 4px !important;
+    margin-left: auto !important;
+  }
+
+  .app-nav__item {
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+  }
+
+  /* Hide admin username text on mobile topbar to avoid crowding */
+  .app-nav .dropdown > a span {
+    display: none !important;
+  }
+
+  /* Mobile Slide-in Sidebar Drawer */
+  .app-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 280px !important;
+    max-width: 85vw !important;
+    z-index: 1050 !important;
+    transform: translateX(-105%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.8) !important;
+    background: #0f172a !important;
+  }
+
+  .sidenav-toggled .app-sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .app-sidebar__overlay {
+    z-index: 1040 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  /* App Mobile Bottom Command Dock */
+  .app-mobile-dock {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 64px !important;
+    background: rgba(15, 23, 42, 0.92) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    z-index: 1030 !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 0 6px !important;
+    padding-bottom: env(safe-area-inset-bottom, 0) !important;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .app-dock-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #94a3b8 !important;
+    text-decoration: none !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    gap: 3px !important;
+    flex: 1 !important;
+    padding: 6px 0 !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .app-dock-item i {
+    font-size: 17px !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  .app-dock-item.active {
+    color: var(--color-primary) !important;
+  }
+
+  .app-dock-item.active i {
+    transform: scale(1.15) !important;
+    filter: drop-shadow(0 2px 8px var(--color-primary));
+  }
+
+  /* Page Title Banner */
+  .app-title {
+    padding: 16px 18px !important;
+    border-radius: 16px !important;
+    margin-bottom: 20px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .app-title h1 {
+    font-size: 20px !important;
+  }
+
+  .tile {
+    padding: 18px 16px !important;
+    border-radius: 16px !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Tables: Fluid Horizontal Touch Scrolling */
+  .table-responsive {
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    margin: 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+  }
+
+  .table th, .table td {
+    white-space: nowrap !important;
+    font-size: 12.5px !important;
+    padding: 10px 12px !important;
+  }
+
+  /* Settings 8-Tabs Nav: Horizontal Chip Slider */
+  .settings-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    margin-bottom: 16px !important;
+  }
+
+  .settings-nav .nav-link {
+    flex: 0 0 auto !important;
+    padding: 8px 14px !important;
+    font-size: 12.5px !important;
+    border-radius: 10px !important;
+    border-left: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #cbd5e1 !important;
+  }
+
+  .settings-nav .nav-link.active {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
+  }
 }
