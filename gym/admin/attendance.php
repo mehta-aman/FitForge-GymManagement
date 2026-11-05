@@ -196,11 +196,16 @@ $attendanceLogs = $logStmt->fetchAll(PDO::FETCH_ASSOC);
         <h1><i class="fa fa-qrcode" style="color: var(--color-primary); margin-right: 8px;"></i> Reception Attendance &amp; Check-in</h1>
         <p>Real-time gym floor headcount, QR code entrance scanner, and member verification ledger</p>
       </div>
-      <ul class="app-breadcrumb breadcrumb">
-        <li class="breadcrumb-item"><i class="fa fa-home"></i></li>
-        <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
-        <li class="breadcrumb-item active">Attendance</li>
-      </ul>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="gym-qr.php" class="btn btn-primary" style="font-weight: 600; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+          <i class="fa fa-print"></i> Printable Gym QR Poster
+        </a>
+        <ul class="app-breadcrumb breadcrumb" style="margin-bottom: 0;">
+          <li class="breadcrumb-item"><i class="fa fa-home"></i></li>
+          <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
+          <li class="breadcrumb-item active">Attendance</li>
+        </ul>
+      </div>
     </div>
 
     <!-- Feedback Alerts -->

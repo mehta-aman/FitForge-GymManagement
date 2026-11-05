@@ -139,3 +139,97 @@ function render_favicon_tags($dbh = null) {
            '<link rel="shortcut icon" type="' . $type . '" href="' . htmlspecialchars($fav, ENT_QUOTES, 'UTF-8') . '">' . "\n\t" .
            '<link rel="apple-touch-icon" href="' . htmlspecialchars($fav, ENT_QUOTES, 'UTF-8') . '">';
 }
+
+/**
+ * Detects the active Base URL for the Gym Station QR Code.
+ * Checks saved setting, active Cloudflare Tunnel, or HTTP host.
+ */
+function get_gym_base_url($dbh = null) {
+    // 1. Explicit custom setting in DB
+    $custom = get_setting('gym_checkin_base_url', '', $dbh);
+    if (!empty($custom)) {
+        return rtrim($custom, '/');
+    }
+    // 2. Active Cloudflare Tunnel log
+    if (file_exists('/tmp/cloudflared.log')) {
+        $log = @file_get_contents('/tmp/cloudflared.log');
+        if (!empty($log) && preg_match_all('/https:\/\/[a-z0-9\-]+\.trycloudflare\.com/', $log, $matches)) {
+            $last = end($matches[0]);
+            if (!empty($last)) return rtrim($last, '/');
+        }
+    }
+    // 3. Current HTTP host / forwarded proto
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    $scheme = $isHttps ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8080';
+    return $scheme . $host;
+}
+
+/**
+ * Returns or generates a secure Gym Check-In Token.
+ */
+function get_gym_checkin_token($dbh = null) {
+    $token = get_setting('gym_checkin_token', '', $dbh);
+    if (empty($token)) {
+        $token = 'fg_' . substr(bin2hex(random_bytes(8)), 0, 12);
+        set_setting('gym_checkin_token', $token, 'attendance', $dbh);
+    }
+    return $token;
+}
+
+/**
+ * Returns the full scannable Check-In URL for the Gym QR Code.
+ */
+function get_gym_checkin_url($dbh = null) {
+    $base = get_gym_base_url($dbh);
+    $token = get_gym_checkin_token($dbh);
+    $gymId = function_exists('get_current_gym_id') ? get_current_gym_id() : 1;
+    $requireToken = get_setting('gym_checkin_require_token', '1', $dbh);
+    
+    if ($requireToken === '0' || $requireToken === 'no') {
+        return $base . '/checkin.php?gym=' . $gymId;
+    }
+    return $base . '/checkin.php?gym=' . $gymId . '&token=' . urlencode($token);
+}
+
+/**
+ * Calculates a member's consecutive check-in streak in days.
+ */
+function get_member_checkin_streak($userId, $dbh) {
+    if (!$dbh || empty($userId)) return 0;
+    try {
+        $stmt = $dbh->prepare("
+            SELECT DISTINCT DATE(check_in_time) as visit_date 
+            FROM tbl_attendance 
+            WHERE user_id = :uid 
+            ORDER BY visit_date DESC 
+            LIMIT 30
+        ");
+        $stmt->execute([':uid' => intval($userId)]);
+        $dates = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($dates)) return 0;
+
+        $streak = 0;
+        $today = date('Y-m-d');
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        
+        // Active streak requires attendance either today or yesterday
+        $firstDate = $dates[0];
+        if ($firstDate !== $today && $firstDate !== $yesterday) {
+            return 0;
+        }
+        
+        $expected = $firstDate;
+        foreach ($dates as $d) {
+            if ($d === $expected) {
+                $streak++;
+                $expected = date('Y-m-d', strtotime($expected . ' -1 day'));
+            } else {
+                break;
+            }
+        }
+        return $streak;
+    } catch (Exception $e) {
+        return 0;
+    }
+}

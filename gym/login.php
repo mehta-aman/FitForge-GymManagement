@@ -2,6 +2,21 @@
 require_once 'include/config.php';
 $msg = ""; 
 
+$redirectParam = trim($_GET['redirect'] ?? $_POST['redirect'] ?? '');
+if (!empty($redirectParam)) {
+    // Sanitize: allow only safe relative path without external URL schemes or double slashes
+    if (str_starts_with($redirectParam, '/') || str_contains($redirectParam, ':') || str_contains($redirectParam, '\\')) {
+        $redirectParam = '';
+    }
+}
+
+// If already logged in, redirect immediately
+if (!empty($_SESSION['uid'])) {
+    $target = !empty($redirectParam) ? $redirectParam : 'user-dashboard.php';
+    header("location: " . $target);
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $msg = "Security token mismatch. Please try again.";
@@ -15,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = $throttle['message'];
         } elseif ($email !== "" && $rawPassword !== "") {
             try {
-                $query = "SELECT id, fname, lname, email, mobile, password, address, status, create_date FROM tbluser WHERE email = :email";
+                $query = "SELECT id, fname, lname, email, mobile, password, address, status, create_date, gym_id FROM tbluser WHERE email = :email";
                 $stmt = $dbh->prepare($query);
                 $stmt->bindParam(':email', $email, PDO::PARAM_STR);
                 $stmt->execute();
@@ -31,7 +46,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['email'] = $row['email'];
                         $_SESSION['name']  = $row['fname'];
                         $_SESSION['gym_id'] = $row['gym_id'] ?? 1;
-                        header("location: user-dashboard.php");
+
+                        $target = 'user-dashboard.php';
+                        if (!empty($redirectParam)) {
+                            $target = $redirectParam;
+                        } elseif (!empty($_SESSION['checkin_pending_redirect'])) {
+                            $target = $_SESSION['checkin_pending_redirect'];
+                            unset($_SESSION['checkin_pending_redirect']);
+                        }
+                        header("location: " . $target);
                         exit();
                     }
                 } else {
@@ -78,6 +101,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				<h2 class="ios-auth-title">Member Sign In</h2>
 				<p class="ios-auth-subtitle">Access your gym bookings, workouts, and profile</p>
 
+				<?php if (str_contains($redirectParam, 'checkin')): ?>
+					<div class="ios-badge ios-badge-info" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 14px 16px; border-radius: 16px; background: rgba(16, 185, 129, 0.16); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399; text-align: left;">
+						<i class="fa fa-qrcode" style="font-size: 26px; flex-shrink: 0; color: #10b981;"></i>
+						<div>
+							<div style="font-weight: 700; font-size: 14px; color: #fff;">Gym Self Check-In</div>
+							<div style="font-size: 12.5px; opacity: 0.9; margin-top: 2px;">Sign in to immediately log your attendance for today's session!</div>
+						</div>
+					</div>
+				<?php endif; ?>
+
 				<?php if(!empty($msg)): ?>
 					<div class="ios-badge ios-badge-danger" style="display: flex; margin-bottom: 24px; padding: 12px 16px; border-radius: 14px; text-align: left;">
 						<i class="fa fa-exclamation-circle" style="font-size: 16px; margin-right: 8px;"></i>
@@ -87,6 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 				<form method="post" autocomplete="off">
 					<?php echo csrf_input(); ?>
+					<?php if (!empty($redirectParam)): ?>
+						<input type="hidden" name="redirect" value="<?php echo htmlspecialchars($redirectParam, ENT_QUOTES, 'UTF-8'); ?>">
+					<?php endif; ?>
 					<div class="ios-form-group">
 						<label class="ios-label" for="email">Email Address</label>
 						<input type="email" name="email" id="email" class="ios-input" placeholder="name@domain.com" required autofocus value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
@@ -102,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					</button>
 
 					<div style="margin-top: 24px; font-size: 14px; color: var(--text-secondary);">
-						Don't have an account? <a href="registration.php" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">Create one here</a>
+						Don't have an account? <a href="registration.php<?php echo !empty($redirectParam) ? '?redirect=' . urlencode($redirectParam) : ''; ?>" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">Create one here</a>
 					</div>
 				</form>
 			</div>

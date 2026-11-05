@@ -2,6 +2,13 @@
 error_reporting(0);
 require_once('include/config.php');
 
+$redirectParam = trim($_GET['redirect'] ?? $_POST['redirect'] ?? '');
+if (!empty($redirectParam)) {
+    if (str_starts_with($redirectParam, '/') || str_contains($redirectParam, ':') || str_contains($redirectParam, '\\')) {
+        $redirectParam = '';
+    }
+}
+
 if(isset($_POST['submit'])) { 
   if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
     $error = "Security token mismatch. Please try again.";
@@ -47,8 +54,9 @@ if(isset($_POST['submit'])) {
       $query->execute();
       $lastInsertId = $dbh->lastInsertId();
       if($lastInsertId > 0) {
+        $loginTarget = 'login.php' . (!empty($redirectParam) ? '?redirect=' . urlencode($redirectParam) : '');
         echo "<script>alert('Registration successful! Please login.');</script>";
-        echo "<script>window.location.href='login.php';</script>";
+        echo "<script>window.location.href='" . $loginTarget . "';</script>";
         exit();
       } else {
         $error = "Registration failed, please try again.";
@@ -90,6 +98,9 @@ if(isset($_POST['submit'])) {
 
 				<form method="post" autocomplete="off">
 					<?php echo csrf_input(); ?>
+					<?php if (!empty($redirectParam)): ?>
+						<input type="hidden" name="redirect" value="<?php echo htmlspecialchars($redirectParam, ENT_QUOTES, 'UTF-8'); ?>">
+					<?php endif; ?>
 					<div class="row">
 						<div class="col-md-6">
 							<div class="ios-form-group">
@@ -155,7 +166,7 @@ if(isset($_POST['submit'])) {
 					</button>
 
 					<div style="margin-top: 24px; font-size: 14px; color: var(--text-secondary);">
-						Already have an account? <a href="login.php" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">Sign In here</a>
+						Already have an account? <a href="login.php<?php echo !empty($redirectParam) ? '?redirect=' . urlencode($redirectParam) : ''; ?>" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">Sign In here</a>
 					</div>
 				</form>
 			</div>

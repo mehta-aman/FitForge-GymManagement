@@ -34,11 +34,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </li>
 
     <!-- 2. Attendance & QR Check-in -->
-    <li>
-      <a class="app-menu__item <?php echo ($currentPage == 'attendance.php') ? 'active' : ''; ?>" href="attendance.php">
+    <li class="treeview <?php echo in_array($currentPage, ['attendance.php', 'gym-qr.php']) ? 'is-expanded' : ''; ?>">
+      <a class="app-menu__item" href="#" data-toggle="treeview">
         <i class="app-menu__icon fa fa-qrcode" style="color: #10b981;"></i>
-        <span class="app-menu__label">Attendance &amp; Floor</span>
+        <span class="app-menu__label">Attendance &amp; Check-In</span>
+        <i class="treeview-indicator fa fa-angle-right"></i>
       </a>
+      <ul class="treeview-menu">
+        <li><a class="treeview-item <?php echo ($currentPage == 'attendance.php') ? 'active' : ''; ?>" href="attendance.php"><i class="icon fa fa-users"></i> Live Floor &amp; Staff Scanner</a></li>
+        <li><a class="treeview-item <?php echo ($currentPage == 'gym-qr.php') ? 'active' : ''; ?>" href="gym-qr.php"><i class="icon fa fa-print"></i> Gym QR Poster &amp; Station</a></li>
+      </ul>
     </li>
 
     <!-- 3. Members & Memberships -->
