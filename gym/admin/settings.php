@@ -1,9 +1,6 @@
 <?php
 require_once 'include/config.php';
-if (empty($_SESSION['adminid'])) {
-    header('location:login.php');
-    exit();
-}
+require_owner();
 
 $msg = '';
 $err = '';

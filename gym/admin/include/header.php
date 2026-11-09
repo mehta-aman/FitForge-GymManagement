@@ -128,7 +128,9 @@ button.btn-primary {
     $topExpiring = isset($dbh) ? intval($dbh->query("SELECT count(*) FROM tbl_memberships WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)")->fetchColumn()) : 0;
     $topDues = isset($dbh) ? intval($dbh->query("SELECT count(DISTINCT b.id) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) < (CAST(p.Price AS DECIMAL(10,2)) + CAST(COALESCE(p.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(p.discount,0) AS DECIMAL(10,2)))")->fetchColumn()) : 0;
     $topFloor = isset($dbh) ? intval($dbh->query("SELECT count(*) FROM tbl_attendance WHERE DATE(check_in_time) = CURDATE() AND check_out_time IS NULL")->fetchColumn()) : 0;
-    $totalTopAlerts = $topExpiring + $topDues;
+    $topPendingStaff = (function_exists('is_owner') && is_owner() && isset($dbh)) ? get_pending_staff_count($dbh) : 0;
+    $totalTopAlerts = $topExpiring + $topDues + $topPendingStaff;
+    $currentRole = function_exists('current_admin_role') ? current_admin_role() : 'admin';
     ?>
     <!-- Live Floor Pill -->
     <li class="d-none d-md-block">
@@ -151,8 +153,26 @@ button.btn-primary {
           <span>Operational Alerts</span>
           <span class="ios-badge ios-badge-danger" style="font-size: 10.5px; padding: 3px 8px;"><?php echo $totalTopAlerts; ?> Pending</span>
         </li>
+        <?php if ($topPendingStaff > 0): ?>
+        <li style="margin-top: 6px;">
+          <a class="dropdown-item" href="staff.php" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+            <i class="fa fa-user-plus text-warning" style="font-size: 15px; width: 18px; text-align: center;"></i>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; color: #fbbf24; font-size: 12.5px;"><?php echo $topPendingStaff; ?> Staff Approval<?php echo $topPendingStaff > 1 ? 's' : ''; ?></div>
+              <div style="font-size: 11px; color: #cbd5e1;">Review &amp; activate employees</div>
+            </div>
+          </a>
+        </li>
+        <?php endif; ?>
         <li style="margin-top: 6px;">
           <a class="dropdown-item" href="report-expirations.php?range=7">
+            <i class="fa fa-clock-o text-warning" style="font-size: 15px; width: 18px; text-align: center;"></i>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: #fff; font-size: 12.5px;"><?php echo $topExpiring; ?> Expiring Soon (7d)</div>
+              <div style="font-size: 11px; color: #94a3b8;">Send WhatsApp renewals</div>
+            </div>
+          </a>
+        </li>
             <i class="fa fa-clock-o text-warning" style="font-size: 15px; width: 18px; text-align: center;"></i>
             <div style="flex: 1; min-width: 0;">
               <div style="font-weight: 600; color: #fff; font-size: 12.5px;"><?php echo $topExpiring; ?> Expiring Soon (7d)</div>
@@ -185,10 +205,17 @@ button.btn-primary {
     <li class="dropdown">
       <a class="app-nav__item" href="#" data-toggle="dropdown" aria-label="Open Profile Menu">
         <i class="fa fa-shield" style="color: var(--color-primary); font-size: 14px;"></i>
-        <span style="max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo !empty($_SESSION['name']) ? htmlentities($_SESSION['name']) : 'Admin'; ?></span>
+        <span style="max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo !empty($_SESSION['name']) ? htmlentities($_SESSION['name']) : 'Staff'; ?></span>
         <i class="fa fa-angle-down" style="font-size: 11px; margin-left: 2px; color: #94a3b8;"></i>
       </a>
-      <ul class="dropdown-menu settings-menu dropdown-menu-right" style="min-width: 200px; padding: 8px;">
+      <ul class="dropdown-menu settings-menu dropdown-menu-right" style="min-width: 220px; padding: 8px;">
+        <li style="padding: 8px 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px;">
+          <div style="font-weight: 700; color: #fff; font-size: 13.5px;"><?php echo htmlentities($_SESSION['name'] ?? 'Staff'); ?></div>
+          <div style="margin-top: 4px;"><?php echo function_exists('get_role_badge') ? get_role_badge($currentRole) : ''; ?></div>
+        </li>
+        <?php if (function_exists('is_owner') && is_owner()): ?>
+          <li><a class="dropdown-item" href="staff.php"><i class="fa fa-users fa-lg" style="width: 18px; text-align: center; color: #f59e0b;"></i> Staff &amp; Approvals</a></li>
+        <?php endif; ?>
         <li><a class="dropdown-item" href="profile.php"><i class="fa fa-user fa-lg" style="width: 18px; text-align: center;"></i> Admin Profile</a></li>
         <li><a class="dropdown-item" href="change-password.php"><i class="fa fa-key fa-lg" style="width: 18px; text-align: center;"></i> Change Password</a></li>
         <li><a class="dropdown-item" href="../index.php" target="_blank"><i class="fa fa-external-link fa-lg" style="width: 18px; text-align: center;"></i> Public Portal</a></li>

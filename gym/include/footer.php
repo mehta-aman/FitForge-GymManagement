@@ -62,6 +62,14 @@ $yt = get_setting('social_youtube');
     <span>Contact</span>
   </a>
   <?php if(!empty($_SESSION['uid'])): ?>
+    <a href="scan.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>" style="<?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? '' : 'color: #38bdf8;'; ?>">
+      <i class="fa fa-camera" style="font-size: 18px;"></i>
+      <span>Scan QR</span>
+    </a>
+    <a href="user-dashboard.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
+      <i class="fa fa-qrcode"></i>
+      <span>Pass</span>
+    </a>
     <a href="profile.php" class="ios-tab-item <?php echo in_array(basename($_SERVER['PHP_SELF']), ['profile.php', 'Booking-History.php', 'booking-details.php', 'changepassword.php']) ? 'active' : ''; ?>">
       <i class="fa fa-user"></i>
       <span>Account</span>

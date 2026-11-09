@@ -199,12 +199,15 @@ $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urle
         </p>
       </div>
 
-      <div style="display: flex; gap: 10px;">
-        <a href="Booking-History.php" class="ios-btn ios-btn-glass" style="padding: 10px 18px; border-radius: 12px; font-weight: 600;">
-          <i class="fa fa-history"></i> My Bookings &amp; Receipts
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="scan.php" class="ios-btn ios-btn-primary" style="padding: 10px 16px; border-radius: 12px; font-weight: 700; box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35); display: inline-flex; align-items: center; gap: 8px;">
+          <i class="fa fa-camera"></i> Scan Attendance
         </a>
-        <a href="profile.php" class="ios-btn ios-btn-accent" style="padding: 10px 18px; border-radius: 12px; font-weight: 600;">
-          <i class="fa fa-user"></i> Edit Profile
+        <a href="Booking-History.php" class="ios-btn ios-btn-glass" style="padding: 10px 16px; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+          <i class="fa fa-history"></i> Bookings
+        </a>
+        <a href="profile.php" class="ios-btn ios-btn-accent" style="padding: 10px 16px; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+          <i class="fa fa-user"></i> Profile
         </a>
       </div>
     </div>
@@ -251,10 +254,18 @@ $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urle
               <img src="<?php echo htmlspecialchars($qrUrl); ?>" alt="Member Check-in QR Code">
             </div>
 
-            <div style="text-align: center; margin-bottom: 20px;">
+            <div style="text-align: center; margin-bottom: 16px;">
               <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;">Digital Check-in Token</div>
               <div style="font-size: 18px; font-weight: 800; color: #fff; font-family: monospace; letter-spacing: 0.1em;"><?php echo $memberCode; ?></div>
               <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Hold this QR code up at the reception camera to check in</div>
+            </div>
+
+            <!-- In-App Camera Scanner CTA -->
+            <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 16px; padding: 14px; text-align: center; margin-bottom: 18px;">
+              <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">Or self-check-in by scanning the entrance poster:</div>
+              <a href="scan.php" class="ios-btn ios-btn-primary" style="width: 100%; justify-content: center; font-size: 14px; padding: 10px 16px;">
+                <i class="fa fa-camera" style="font-size: 15px;"></i> Open Camera Scanner
+              </a>
             </div>
 
             <div style="border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">

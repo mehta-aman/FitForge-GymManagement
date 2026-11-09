@@ -1,6 +1,8 @@
 <?php
 require_once 'include/config.php';
 $msg = ""; 
+$successMsg = $_SESSION['reg_success_msg'] ?? '';
+unset($_SESSION['reg_success_msg']);
 
 if (isset($_POST['submit'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
@@ -15,21 +17,40 @@ if (isset($_POST['submit'])) {
             $msg = $throttle['message'];
         } elseif ($email !== "" && $rawPassword !== "") {
             try {
-                $query = "SELECT id, name, email, mobile, password, create_date, gym_id FROM tbladmin WHERE email = :email";
+                $query = "SELECT id, name, email, mobile, password, role, status, trainer_id, rejection_reason, create_date, gym_id FROM tbladmin WHERE email = :email";
                 $stmt = $dbh->prepare($query);
                 $stmt->bindParam(':email', $email, PDO::PARAM_STR);
                 $stmt->execute();
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($row && verify_and_rehash_password($rawPassword, $row['password'], 'tbladmin', 'id', $row['id'], $dbh)) {
-                    clear_login_attempts($email, $dbh);
-                    regenerate_secure_session();
-                    $_SESSION['adminid'] = $row['id'];
-                    $_SESSION['email']   = $row['email'];
-                    $_SESSION['name']    = $row['name'];
-                    $_SESSION['gym_id']  = $row['gym_id'] ?? 1;
-                    header("location: index.php");
-                    exit();
+                    // Check staff account approval status
+                    $status = $row['status'] ?? 'pending';
+                    if ($status === 'pending') {
+                        $msg = "⏳ Your staff account is currently pending approval by the Gym Owner. You will be able to log in once reviewed.";
+                    } elseif ($status === 'rejected') {
+                        $msg = "❌ Your staff registration request was not approved by the owner." . (!empty($row['rejection_reason']) ? " Reason: " . htmlspecialchars($row['rejection_reason']) : "");
+                    } elseif ($status === 'suspended') {
+                        $msg = "⛔ This staff account has been suspended by the Gym Owner. Please contact management.";
+                    } else {
+                        // Approved: Proceed to login
+                        clear_login_attempts($email, $dbh);
+                        regenerate_secure_session();
+                        $_SESSION['adminid']      = $row['id'];
+                        $_SESSION['email']        = $row['email'];
+                        $_SESSION['name']         = $row['name'];
+                        $_SESSION['admin_role']   = $row['role'] ?? 'floor_staff';
+                        $_SESSION['admin_status'] = $row['status'] ?? 'approved';
+                        $_SESSION['trainer_id']   = $row['trainer_id'] ?? null;
+                        $_SESSION['gym_id']       = $row['gym_id'] ?? 1;
+
+                        // Update last_login
+                        $upd = $dbh->prepare("UPDATE tbladmin SET last_login = NOW() WHERE id = :id");
+                        $upd->execute([':id' => $row['id']]);
+
+                        header("location: index.php");
+                        exit();
+                    }
                 } else {
                     record_failed_login($email, $dbh);
                     $msg = "Invalid admin username or password!";
@@ -74,8 +95,15 @@ if (isset($_POST['submit'])) {
 					<i class="fa fa-shield"></i>
 				</div>
 			<?php endif; ?>
-			<h2 class="ios-auth-title">Admin Console</h2>
-			<p class="ios-auth-subtitle"><?php echo htmlspecialchars(get_setting('gym_name', 'GYM MS')); ?> &bull; Restricted Access</p>
+			<h2 class="ios-auth-title">Staff Portal</h2>
+			<p class="ios-auth-subtitle"><?php echo htmlspecialchars(get_setting('gym_name', 'GYM MS')); ?> &bull; Authorized Personnel Only</p>
+
+			<?php if(!empty($successMsg)): ?>
+				<div class="ios-badge ios-badge-success" style="display: flex; margin-bottom: 24px; padding: 14px 16px; border-radius: 14px; text-align: left; background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;">
+					<i class="fa fa-check-circle" style="font-size: 18px; margin-right: 10px; flex-shrink: 0; margin-top: 2px;"></i>
+					<span style="font-size: 13.5px;"><?php echo htmlentities($successMsg); ?></span>
+				</div>
+			<?php endif; ?>
 
 			<?php if(!empty($msg)): ?>
 				<div class="ios-badge ios-badge-danger" style="display: flex; margin-bottom: 24px; padding: 12px 16px; border-radius: 14px; text-align: left;">
@@ -87,12 +115,12 @@ if (isset($_POST['submit'])) {
 			<form method="post" autocomplete="off">
 				<?php echo csrf_input(); ?>
 				<div class="ios-form-group">
-					<label class="ios-label">Admin Email</label>
-					<input class="ios-input" name="email" id="email" type="email" placeholder="admin@domain.com" required autofocus value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+					<label class="ios-label">Staff Email</label>
+					<input class="ios-input" name="email" id="email" type="email" placeholder="staff@domain.com" required autofocus value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
 				</div>
 				<div class="ios-form-group">
 					<label class="ios-label">Password</label>
-					<input class="ios-input" name="password" id="password" type="password" placeholder="Admin password" required>
+					<input class="ios-input" name="password" id="password" type="password" placeholder="Staff password" required>
 				</div>
 
 				<button type="submit" name="submit" id="submit" class="ios-btn ios-btn-primary" style="width: 100%; margin-top: 10px;">
@@ -100,7 +128,11 @@ if (isset($_POST['submit'])) {
 				</button>
 			</form>
 
-			<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+			<div style="margin-top: 20px; font-size: 13.5px; color: var(--text-secondary); text-align: center;">
+				New Employee or Trainer? <a href="register.php" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">Register Staff Account</a>
+			</div>
+
+			<div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
 				<a href="../index.php" style="color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
 					<i class="fa fa-arrow-left"></i> Return to Public Site
 				</a>

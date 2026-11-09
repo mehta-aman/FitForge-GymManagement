@@ -81,6 +81,31 @@ $planCounts = json_encode(array_map('intval', array_column($planDistData, 'cnt')
       </ul>
     </div>
 
+    <!-- Role Gatekeeping Alert Banner -->
+    <?php if (!empty($_SESSION['rbac_error'])): ?>
+      <div class="alert alert-warning alert-dismissible fade show" style="border-radius: 14px; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fff;">
+        <i class="fa fa-shield"></i> <?php echo htmlspecialchars($_SESSION['rbac_error']); ?>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+      <?php unset($_SESSION['rbac_error']); ?>
+    <?php endif; ?>
+
+    <!-- Owner Notice: Pending Staff Approvals -->
+    <?php if (function_exists('is_owner') && is_owner() && function_exists('get_pending_staff_count')): 
+      $pStaff = get_pending_staff_count($dbh);
+      if ($pStaff > 0):
+    ?>
+      <div class="alert alert-info alert-dismissible fade show" style="border-radius: 14px; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <i class="fa fa-user-plus text-warning" style="margin-right: 6px;"></i>
+          <strong>Staff Approvals Pending:</strong> There <?php echo $pStaff === 1 ? 'is 1 employee' : "are $pStaff employees"; ?> waiting for your owner approval.
+        </div>
+        <a href="staff.php" class="btn btn-sm btn-info" style="border-radius: 8px; font-weight: 700;">
+          <i class="fa fa-check"></i> Review Requests
+        </a>
+      </div>
+    <?php endif; endif; ?>
+
     <!-- KPI Row 1: Membership Lifecycle -->
     <div class="row">
       <!-- Total Members -->

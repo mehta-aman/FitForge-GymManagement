@@ -39,6 +39,7 @@ try {
 // Load Core Services from parent include
 require_once __DIR__ . '/../../include/security.php';
 require_once __DIR__ . '/../../include/settings.php';
+require_once __DIR__ . '/rbac.php';
 
 // Initialize hardened session
 init_secure_session();

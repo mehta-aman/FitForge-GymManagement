@@ -147,6 +147,9 @@ body {
       <i class="fa fa-envelope"></i> Contact
     </a>
     <?php if(!empty($_SESSION['uid'])): ?>
+      <a href="scan.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>" style="color: #38bdf8;">
+        <i class="fa fa-camera"></i> Scan QR
+      </a>
       <a href="user-dashboard.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
         <i class="fa fa-qrcode" style="color: #10b981;"></i> Digital Pass
       </a>
@@ -232,6 +235,11 @@ body {
         <i class="fa fa-angle-right ios-link-chevron"></i>
       </a>
       <?php if(!empty($_SESSION['uid'])): ?>
+        <a href="scan.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon" style="color: #38bdf8;"><i class="fa fa-camera"></i></span>
+          <span class="ios-link-text">Scan Gym Attendance QR</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
         <a href="user-dashboard.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
           <span class="ios-link-icon" style="color: #10b981;"><i class="fa fa-qrcode"></i></span>
           <span class="ios-link-text">Digital Pass &amp; Workouts</span>

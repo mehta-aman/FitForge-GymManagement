@@ -1,9 +1,6 @@
 <?php
 require_once 'include/config.php';
-if (empty($_SESSION['adminid'])) {
-    header('location:login.php');
-    exit();
-}
+require_role(['owner', 'manager']);
 
 // 1. KPI Calculations
 $totalRevenue = floatval($dbh->query("SELECT COALESCE(SUM(payment), 0) FROM tblpayment")->fetchColumn());

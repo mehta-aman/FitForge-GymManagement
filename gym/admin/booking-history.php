@@ -1,9 +1,6 @@
 <?php
 require_once 'include/config.php';
-if (empty($_SESSION['adminid'])) {
-    header('location:login.php');
-    exit();
-}
+require_role(['owner', 'manager']);
 
 $typeFilter = trim($_GET['type'] ?? 'all');
 $search = trim($_GET['search'] ?? '');
