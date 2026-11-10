@@ -74,6 +74,15 @@ $yt = get_setting('social_youtube');
       <i class="fa fa-user"></i>
       <span>Account</span>
     </a>
+  <?php elseif(!empty($_SESSION['adminid'])): ?>
+    <a href="admin/index.php" class="ios-tab-item">
+      <i class="fa fa-shield" style="color: #60a5fa;"></i>
+      <span>Staff Hub</span>
+    </a>
+    <a href="admin/logout.php" class="ios-tab-item">
+      <i class="fa fa-sign-out"></i>
+      <span>Logout</span>
+    </a>
   <?php else: ?>
     <a href="login.php" class="ios-tab-item <?php echo in_array(basename($_SERVER['PHP_SELF']), ['login.php', 'registration.php']) ? 'active' : ''; ?>">
       <i class="fa fa-sign-in"></i>

@@ -1,6 +1,12 @@
 <?php
 require_once 'include/config.php';
 
+// If user is already authenticated as admin, jump straight to admin dashboard
+if (!empty($_SESSION['adminid'])) {
+    header("location: index.php");
+    exit();
+}
+
 $msg = "";
 $error = "";
 
@@ -8,17 +14,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $error = "Security token mismatch. Please try again.";
     } else {
-        $name = trim($_POST['name'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $mobile = trim($_POST['mobile'] ?? '');
+        $name = trim($_POST['name'] ?? $_POST['staff_name'] ?? '');
+        $email = trim($_POST['email'] ?? $_POST['staff_email'] ?? '');
+        $mobile = trim($_POST['mobile'] ?? $_POST['staff_mobile'] ?? '');
         $requestedRole = trim($_POST['requested_role'] ?? 'floor_staff');
-        $rawPassword = $_POST['password'] ?? '';
-        $repeatPassword = $_POST['repeat_password'] ?? '';
+        $rawPassword = $_POST['password'] ?? $_POST['staff_password'] ?? '';
+        $repeatPassword = $_POST['repeat_password'] ?? $_POST['staff_repeat_password'] ?? '';
         $speciality = trim($_POST['speciality'] ?? '');
         $bio = trim($_POST['bio'] ?? '');
-        $gymId = get_current_gym_id();
+        $gymId = function_exists('get_current_gym_id') ? get_current_gym_id() : 1;
 
-        // Allowed self-registration roles (Owner cannot be self-registered)
         $allowedRoles = ['manager', 'trainer', 'floor_staff'];
 
         if (empty($name) || empty($email) || empty($mobile) || empty($rawPassword)) {
@@ -32,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($rawPassword !== $repeatPassword) {
             $error = "Passwords do not match.";
         } else {
-            // Check if email already exists in tbladmin
             $chk = $dbh->prepare("SELECT id FROM tbladmin WHERE email = :email LIMIT 1");
             $chk->execute([':email' => $email]);
             if ($chk->fetch()) {
@@ -41,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hash = password_hash($rawPassword, PASSWORD_DEFAULT);
                 $trainerId = null;
 
-                // If trainer, pre-create a profile in tbl_trainers
                 if ($requestedRole === 'trainer') {
                     $tSpec = !empty($speciality) ? $speciality : 'General Fitness & Strength';
                     $insTrainer = $dbh->prepare("INSERT INTO tbl_trainers (name, speciality, mobile, email, experience_years, bio, status, gym_id) VALUES (:name, :spec, :mob, :email, 1, :bio, 'inactive', :gym_id)");
@@ -56,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $trainerId = $dbh->lastInsertId();
                 }
 
-                // Insert staff account with status = 'pending'
                 $insAdmin = $dbh->prepare("
                     INSERT INTO tbladmin (name, email, mobile, password, role, status, trainer_id, create_date, gym_id)
                     VALUES (:name, :email, :mob, :pwd, :role, 'pending', :tid, NOW(), :gym_id)
@@ -78,13 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$gymTitle = get_setting('gym_name', 'GYM MS');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Staff Registration — <?php echo htmlspecialchars(get_setting('gym_name', 'GYM MS')); ?></title>
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Staff Registration — <?php echo htmlspecialchars($gymTitle); ?></title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 	<?php echo render_favicon_tags(); ?>
 	<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
 	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -108,8 +112,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			border-radius: 28px;
 			padding: 36px 30px;
 			width: 100%;
-			max-width: 520px;
+			max-width: 540px;
 			box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+		}
+		.ios-portal-switcher {
+			display: flex;
+			background: rgba(15, 23, 42, 0.7);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 16px;
+			padding: 4px;
+			gap: 4px;
+			margin: 20px 0 18px 0;
+		}
+		.portal-tab-btn {
+			flex: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			padding: 10px 14px;
+			font-size: 13.5px;
+			font-weight: 700;
+			color: #94a3b8;
+			background: transparent;
+			border: 1px solid transparent;
+			border-radius: 12px;
+			text-decoration: none;
+			transition: all 0.25s ease;
+		}
+		.portal-tab-btn:hover {
+			color: #fff;
+			background: rgba(255, 255, 255, 0.05);
+			text-decoration: none;
+		}
+		.portal-tab-btn.active {
+			color: #ffffff;
+			background: linear-gradient(135deg, rgba(99, 102, 241, 0.28) 0%, rgba(168, 85, 247, 0.32) 100%);
+			border-color: rgba(129, 140, 248, 0.5);
+			box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+			text-decoration: none;
 		}
 		.role-selector-card {
 			border: 1px solid rgba(255, 255, 255, 0.12);
@@ -122,6 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			display: flex;
 			align-items: center;
 			gap: 12px;
+			text-align: left;
 		}
 		.role-selector-card:hover {
 			border-color: rgba(56, 189, 248, 0.4);
@@ -131,28 +173,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			accent-color: #38bdf8;
 			width: 18px;
 			height: 18px;
+			flex-shrink: 0;
+		}
+		.ios-input-icon-wrapper {
+			position: relative;
+			display: flex;
+			align-items: center;
+		}
+		.pwd-toggle-btn {
+			position: absolute;
+			right: 8px;
+			top: 50%;
+			transform: translateY(-50%);
+			background: transparent;
+			border: none;
+			color: #94a3b8;
+			padding: 8px 12px;
+			cursor: pointer;
+			font-size: 15px;
+			border-radius: 8px;
+			transition: color 0.2s ease;
+		}
+		.pwd-toggle-btn:hover {
+			color: #fff;
+		}
+		.signin-prompt-box {
+			margin-top: 24px;
+			padding-top: 20px;
+			border-top: 1px solid rgba(255, 255, 255, 0.08);
+			text-align: center;
+		}
+		.signin-pill-group {
+			display: flex;
+			gap: 10px;
+			justify-content: center;
+			margin-top: 10px;
+		}
+		.signin-pill {
+			flex: 1;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+			padding: 9px 12px;
+			border-radius: 12px;
+			font-size: 12.5px;
+			font-weight: 600;
+			text-decoration: none;
+			transition: all 0.2s ease;
+		}
+		.signin-pill-member {
+			background: rgba(56, 189, 248, 0.12);
+			border: 1px solid rgba(56, 189, 248, 0.3);
+			color: #38bdf8;
+		}
+		.signin-pill-member:hover {
+			background: rgba(56, 189, 248, 0.22);
+			color: #fff;
+			text-decoration: none;
+		}
+		.signin-pill-staff {
+			background: rgba(129, 140, 248, 0.12);
+			border: 1px solid rgba(129, 140, 248, 0.3);
+			color: #a5b4fc;
+		}
+		.signin-pill-staff:hover {
+			background: rgba(129, 140, 248, 0.24);
+			color: #fff;
+			text-decoration: none;
 		}
 	</style>
 </head>
 <body>
 
 	<div class="reg-card">
-		<div style="text-align: center; margin-bottom: 24px;">
-			<div style="width: 64px; height: 64px; border-radius: 20px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-				<i class="fa fa-user-plus"></i>
+		<div style="text-align: center; margin-bottom: 12px;">
+			<div style="width: 60px; height: 60px; border-radius: 18px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;">
+				<i class="fa fa-briefcase"></i>
 			</div>
-			<h2 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 4px;">Staff Account Registration</h2>
-			<p style="font-size: 13.5px; color: #94a3b8; margin: 0;">Request employee or trainer access to <?php echo htmlspecialchars(get_setting('gym_name', 'Golden Eagle')); ?></p>
+			<h2 style="font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 4px;">Staff Account Application</h2>
+			<p style="font-size: 13.5px; color: #94a3b8; margin: 0;">Request employee or trainer access to <?php echo htmlspecialchars($gymTitle); ?></p>
+		</div>
+
+		<!-- Segmented Switcher connecting Member & Staff -->
+		<div class="ios-portal-switcher" role="tablist">
+			<a href="../registration.php?portal=member" class="portal-tab-btn">
+				<i class="fa fa-user-plus"></i>
+				<span>Join as Member</span>
+			</a>
+			<span class="portal-tab-btn active">
+				<i class="fa fa-briefcase"></i>
+				<span>Apply as Staff / Coach</span>
+			</span>
 		</div>
 
 		<?php if (!empty($error)): ?>
-			<div class="ios-badge ios-badge-danger" style="display: flex; margin-bottom: 20px; padding: 12px 16px; border-radius: 14px; text-align: left;">
+			<div class="ios-badge ios-badge-danger" style="display: flex; margin-bottom: 20px; padding: 12px 16px; border-radius: 14px; text-align: left; background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171;">
 				<i class="fa fa-exclamation-circle" style="font-size: 16px; margin-right: 8px; flex-shrink: 0; margin-top: 2px;"></i>
 				<span><?php echo htmlspecialchars($error); ?></span>
 			</div>
 		<?php endif; ?>
 
-		<form method="post" autocomplete="off">
+		<form method="post" autocomplete="off" style="text-align: left;">
 			<?php echo csrf_input(); ?>
 
 			<div class="ios-form-group">
@@ -170,7 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				<div class="col-sm-6">
 					<div class="ios-form-group">
 						<label class="ios-label">Mobile Number *</label>
-						<input type="text" name="mobile" class="ios-input" placeholder="+91 9876543210" required value="<?php echo htmlspecialchars($_POST['mobile'] ?? ''); ?>">
+						<input type="tel" name="mobile" class="ios-input" placeholder="+91 9876543210" required value="<?php echo htmlspecialchars($_POST['mobile'] ?? ''); ?>">
 					</div>
 				</div>
 			</div>
@@ -219,13 +341,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				<div class="col-sm-6">
 					<div class="ios-form-group">
 						<label class="ios-label">Password *</label>
-						<input type="password" name="password" class="ios-input" placeholder="Min 6 characters" required>
+						<div class="ios-input-icon-wrapper">
+							<input type="password" name="password" id="staffPass" class="ios-input" placeholder="Min 6 characters" required>
+							<button type="button" class="pwd-toggle-btn" onclick="togglePass('staffPass', 'eye1')" aria-label="Toggle password view">
+								<i class="fa fa-eye" id="eye1"></i>
+							</button>
+						</div>
 					</div>
 				</div>
 				<div class="col-sm-6">
 					<div class="ios-form-group">
 						<label class="ios-label">Confirm Password *</label>
-						<input type="password" name="repeat_password" class="ios-input" placeholder="Repeat password" required>
+						<div class="ios-input-icon-wrapper">
+							<input type="password" name="repeat_password" id="staffRepeatPass" class="ios-input" placeholder="Repeat password" required>
+							<button type="button" class="pwd-toggle-btn" onclick="togglePass('staffRepeatPass', 'eye2')" aria-label="Toggle password view">
+								<i class="fa fa-eye" id="eye2"></i>
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -239,8 +371,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			</button>
 		</form>
 
-		<div style="margin-top: 24px; text-align: center; font-size: 13.5px; color: #94a3b8;">
-			Already have an approved account? <a href="login.php" style="color: var(--color-primary); font-weight: 600; text-decoration: none;">Staff Sign In</a>
+		<!-- Common Sign In Prompt -->
+		<div class="signin-prompt-box">
+			<div style="font-size: 13.5px; color: #94a3b8; font-weight: 500;">
+				Already have an account? Sign in below:
+			</div>
+			<div class="signin-pill-group">
+				<a href="../login.php?portal=member" class="signin-pill signin-pill-member">
+					<i class="fa fa-user"></i> Member Sign In
+				</a>
+				<a href="login.php" class="signin-pill signin-pill-staff">
+					<i class="fa fa-shield"></i> Staff Sign In
+				</a>
+			</div>
 		</div>
 	</div>
 
@@ -248,6 +391,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		function toggleTrainerFields(show) {
 			var el = document.getElementById('trainerExtraFields');
 			if (el) el.style.display = show ? 'block' : 'none';
+		}
+		function togglePass(id, eyeId) {
+			var el = document.getElementById(id);
+			var icon = document.getElementById(eyeId);
+			if (!el) return;
+			if (el.type === 'password') {
+				el.type = 'text';
+				if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+			} else {
+				el.type = 'password';
+				if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+			}
 		}
 	</script>
 </body>

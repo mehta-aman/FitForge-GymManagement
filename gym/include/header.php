@@ -162,6 +162,13 @@ body {
       <a href="logout.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px;">
         <i class="fa fa-sign-out"></i> Logout
       </a>
+    <?php elseif(!empty($_SESSION['adminid'])): ?>
+      <a href="admin/index.php" class="ios-btn ios-btn-primary" style="padding: 8px 16px; font-size: 13px;">
+        <i class="fa fa-shield"></i> Staff Hub (<?php echo ucfirst($_SESSION['admin_role'] ?? 'Staff'); ?>)
+      </a>
+      <a href="admin/logout.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px;">
+        <i class="fa fa-sign-out"></i> Logout
+      </a>
     <?php else: ?>
       <a href="login.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'login.php' ? 'active' : ''; ?>">
         <i class="fa fa-sign-in"></i> Sign In
@@ -215,6 +222,18 @@ body {
           <div class="ios-user-badge"><i class="fa fa-check-circle"></i> Active Member</div>
         </div>
       </div>
+    <?php elseif(!empty($_SESSION['adminid'])): ?>
+      <div class="ios-drawer-user-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.22) 0%, rgba(56, 189, 248, 0.18) 100%); border-color: rgba(99, 102, 241, 0.35);">
+        <div class="ios-user-avatar" style="background: rgba(99, 102, 241, 0.3); color: #818cf8;">
+          <i class="fa fa-shield"></i>
+        </div>
+        <div class="ios-user-info">
+          <div class="ios-user-name"><?php echo htmlentities($_SESSION['name'] ?? 'Staff Member'); ?></div>
+          <div class="ios-user-badge" style="background: rgba(99, 102, 241, 0.25); color: #c7d2fe;">
+            <i class="fa fa-id-badge"></i> <?php echo ucfirst(str_replace('_', ' ', $_SESSION['admin_role'] ?? 'Staff')); ?>
+          </div>
+        </div>
+      </div>
     <?php endif; ?>
 
     <div class="ios-drawer-group" style="margin-bottom: 20px;">
@@ -266,6 +285,13 @@ body {
     <div class="ios-drawer-actions">
       <?php if(!empty($_SESSION['uid'])): ?>
         <a href="logout.php" class="ios-btn ios-btn-glass w-100 text-center" style="display: block; padding: 12px; border-radius: 14px; text-decoration: none;">
+          <i class="fa fa-sign-out"></i> Log Out
+        </a>
+      <?php elseif(!empty($_SESSION['adminid'])): ?>
+        <a href="admin/index.php" class="ios-btn ios-btn-primary w-100 text-center" style="display: block; padding: 12px; border-radius: 14px; text-decoration: none; margin-bottom: 10px;">
+          <i class="fa fa-shield"></i> Open Staff Portal
+        </a>
+        <a href="admin/logout.php" class="ios-btn ios-btn-glass w-100 text-center" style="display: block; padding: 12px; border-radius: 14px; text-decoration: none;">
           <i class="fa fa-sign-out"></i> Log Out
         </a>
       <?php else: ?>
