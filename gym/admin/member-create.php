@@ -58,17 +58,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     // Dual insert
+                    $adminId = intval($_SESSION['adminid'] ?? 1);
                     $bStmt = $dbh->prepare("INSERT INTO tblbooking (package_id, userid, payment, paymentType) VALUES (?, ?, ?, ?)");
                     $bStmt->execute([$planId, $newUserId, $paidAmount, $paymentMethod]);
                     $bookingId = $dbh->lastInsertId();
 
-                    if ($paidAmount > 0) {
-                        $payStmt = $dbh->prepare("INSERT INTO tblpayment (bookingID, paymentType, payment) VALUES (?, ?, ?)");
-                        $payStmt->execute([$bookingId, $paymentMethod, $paidAmount]);
-                    }
-
                     $memStmt = $dbh->prepare("INSERT INTO tbl_memberships (user_id, plan_id, booking_id, start_date, expiry_date, status, payment_status, total_amount, paid_amount, payment_method, admin_notes) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, 'Initial onboarding')");
                     $memStmt->execute([$newUserId, $planId, $bookingId, $startDate, $expiryDate, $paymentStatus, $planPrice, $paidAmount, $paymentMethod]);
+                    $newMemId = $dbh->lastInsertId();
+
+                    if ($paidAmount > 0) {
+                        $payStmt = $dbh->prepare("INSERT INTO tblpayment (bookingID, membership_id, paymentType, payment, payment_method, recorded_by_admin_id) VALUES (?, ?, ?, ?, ?, ?)");
+                        $payStmt->execute([$bookingId, $newMemId, $paymentMethod, $paidAmount, $paymentMethod, $adminId]);
+                    }
                 }
 
                 header("location:member-profile.php?id=$newUserId&msg=" . urlencode("Member registered successfully!"));

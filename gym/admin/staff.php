@@ -158,6 +158,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        // 6. Save Individual Employee Permission Overrides
+        elseif ($action === 'save_permissions') {
+            $staffId = intval($_POST['staff_id'] ?? 0);
+            if ($staffId === $ownerId) {
+                $error = 'Owner permissions are immutable and cannot be overridden.';
+            } else {
+                $chk = $dbh->prepare("SELECT name, role FROM tbladmin WHERE id = :id");
+                $chk->execute([':id' => $staffId]);
+                $targetStaff = $chk->fetch(PDO::FETCH_ASSOC);
+
+                if (!$targetStaff) {
+                    $error = 'Staff member not found.';
+                } else {
+                    $permsSubmitted = $_POST['perm'] ?? [];
+                    $allPerms = get_all_permissions($dbh);
+                    $updatedCount = 0;
+
+                    foreach ($allPerms as $p) {
+                        $pKey = $p['permission_key'];
+                        $isOwnerOnly = intval($p['is_owner_only']) === 1 || in_array($pKey, OWNER_ONLY_FINANCIAL_PERMISSIONS, true);
+                        $state = $permsSubmitted[$pKey] ?? 'default';
+
+                        // Block assigning owner-only financial permissions to non-owners
+                        if ($isOwnerOnly && $state === 'grant') {
+                            continue; // Silently disallow / reject
+                        }
+
+                        if ($state === 'grant') {
+                            set_admin_permission_override($staffId, $pKey, 1, $ownerId, $dbh);
+                            $updatedCount++;
+                        } elseif ($state === 'deny') {
+                            set_admin_permission_override($staffId, $pKey, 0, $ownerId, $dbh);
+                            $updatedCount++;
+                        } elseif ($state === 'default') {
+                            set_admin_permission_override($staffId, $pKey, null, $ownerId, $dbh);
+                        }
+                    }
+
+                    $msg = "Permissions and granular overrides successfully updated for " . htmlspecialchars($targetStaff['name']) . "!";
+                }
+            }
+        }
     }
 }
 
@@ -182,6 +225,20 @@ $staffStmt = $dbh->prepare("
 ");
 $staffStmt->execute();
 $staffList = $staffStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch All Permissions & Current Overrides for Fast Modal Rendering
+$allPermissions = get_all_permissions($dbh);
+$allOverrides = [];
+$ovrStmt = $dbh->query("SELECT admin_id, permission_key, is_granted FROM tbl_admin_permissions");
+foreach ($ovrStmt->fetchAll(PDO::FETCH_ASSOC) as $o) {
+    $allOverrides[intval($o['admin_id'])][$o['permission_key']] = intval($o['is_granted']);
+}
+
+$allRolePerms = [];
+$rpStmt = $dbh->query("SELECT role_key, permission_key FROM tbl_role_permissions");
+foreach ($rpStmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+    $allRolePerms[$r['role_key']][$r['permission_key']] = true;
+}
 
 // Counts
 $totalPending = count($pendingList);
@@ -458,6 +515,9 @@ $gymName = get_setting('gym_name', 'Golden Eagle');
                                         </td>
                                         <td style="text-align: right;">
                                             <?php if (!$isSelf): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="openPermissionsModal(<?php echo $s['id']; ?>, '<?php echo htmlspecialchars($s['name'], ENT_QUOTES); ?>', '<?php echo $s['role']; ?>')" style="border-radius: 8px;">
+                                                    <i class="fa fa-key"></i> Permissions
+                                                </button>
                                                 <button type="button" class="btn btn-sm btn-outline-info" onclick="openEditRoleModal(<?php echo $s['id']; ?>, '<?php echo htmlspecialchars($s['name'], ENT_QUOTES); ?>', '<?php echo $s['role']; ?>')" style="border-radius: 8px;">
                                                     <i class="fa fa-pencil"></i> Role
                                                 </button>
@@ -631,11 +691,96 @@ $gymName = get_setting('gym_name', 'Golden Eagle');
         </div>
     </div>
 
+    <!-- Manage Permissions & Overrides Modal -->
+    <div class="modal fade" id="permissionsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: 20px; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.15); color: #fff;">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                    <div>
+                        <h5 class="modal-title"><i class="fa fa-key text-warning"></i> Granular Employee Permissions &amp; Overrides</h5>
+                        <p style="font-size: 12.5px; color: #94a3b8; margin: 2px 0 0;">
+                            Configure individual overrides for <strong id="permStaffName" style="color: #fff;"></strong> (<span id="permStaffRoleBadge" style="color: #38bdf8; font-weight: 700;"></span>)
+                        </p>
+                    </div>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <form method="post">
+                    <?php echo csrf_input(); ?>
+                    <input type="hidden" name="action" value="save_permissions">
+                    <input type="hidden" name="staff_id" id="permStaffId">
+                    <div class="modal-body" style="max-height: 520px; overflow-y: auto; padding: 18px 24px;">
+                        <div class="alert alert-secondary" style="border-radius: 12px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px; color: #cbd5e1; margin-bottom: 18px;">
+                            <i class="fa fa-shield text-warning"></i> <strong>Option A Restricted Financial Policy:</strong> General payment records, ledgers, dues, receipts, and revenue reports remain strictly reserved for the Gym Owner and cannot be granted to non-owners.
+                        </div>
+
+                        <?php
+                        $groupedPerms = [];
+                        foreach ($allPermissions as $p) {
+                            $cat = $p['category'];
+                            $groupedPerms[$cat][] = $p;
+                        }
+                        $categoryLabels = [
+                            'financial' => ['title' => 'Financial & Accounting (Strict Owner Boundary)', 'icon' => 'fa-money'],
+                            'memberships' => ['title' => 'Membership Plans & Packages', 'icon' => 'fa-id-card'],
+                            'refunds' => ['title' => 'Case-Specific Refund Operations', 'icon' => 'fa-undo'],
+                            'operations' => ['title' => 'Gym Floor & Member Coaching', 'icon' => 'fa-heartbeat'],
+                            'attendance' => ['title' => 'Attendance Station & Check-Ins', 'icon' => 'fa-qrcode'],
+                            'administration' => ['title' => 'Administration & Hierarchy', 'icon' => 'fa-cogs']
+                        ];
+                        foreach ($groupedPerms as $catKey => $perms):
+                            $catInfo = $categoryLabels[$catKey] ?? ['title' => ucfirst($catKey), 'icon' => 'fa-folder'];
+                        ?>
+                            <div style="margin-bottom: 20px;">
+                                <h6 style="color: #38bdf8; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; margin-bottom: 10px;">
+                                    <i class="fa <?php echo $catInfo['icon']; ?>"></i> <?php echo htmlspecialchars($catInfo['title']); ?>
+                                </h6>
+                                <?php foreach ($perms as $p): 
+                                    $pKey = $p['permission_key'];
+                                    $isOwnerOnly = intval($p['is_owner_only']) === 1 || in_array($pKey, OWNER_ONLY_FINANCIAL_PERMISSIONS, true);
+                                ?>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; margin-bottom: 6px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; gap: 12px;">
+                                        <div style="min-width: 0; flex: 1;">
+                                            <div style="font-size: 13px; font-weight: 600; color: #fff;"><?php echo htmlspecialchars($p['label']); ?></div>
+                                            <div style="font-size: 11.5px; color: #94a3b8;"><?php echo htmlspecialchars($p['description']); ?></div>
+                                            <div class="perm-default-hint" id="hint_<?php echo htmlspecialchars($pKey); ?>" style="font-size: 11px; color: #64748b; margin-top: 2px;"></div>
+                                        </div>
+                                        <div style="flex-shrink: 0;">
+                                            <?php if ($isOwnerOnly): ?>
+                                                <span class="badge badge-secondary" style="font-size: 11px; padding: 5px 10px; border-radius: 6px;">
+                                                    <i class="fa fa-lock"></i> Owner Only (Locked)
+                                                </span>
+                                            <?php else: ?>
+                                                <select name="perm[<?php echo htmlspecialchars($pKey); ?>]" id="select_<?php echo htmlspecialchars($pKey); ?>" class="form-control form-control-sm perm-override-select" data-perm="<?php echo htmlspecialchars($pKey); ?>" style="width: 145px; border-radius: 8px; background: rgba(15, 23, 42, 0.9); color: #fff; border-color: rgba(255, 255, 255, 0.2); font-size: 12px;">
+                                                    <option value="default">Role Default</option>
+                                                    <option value="grant">Explicit Grant</option>
+                                                    <option value="deny">Explicit Deny</option>
+                                                </select>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="modal-footer" style="border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                        <button type="submit" class="btn btn-warning" style="border-radius: 8px; font-weight: 600; color: #000;">
+                            <i class="fa fa-save"></i> Save Permissions
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="js/jquery-3.2.1.min.js"></script>
     <script src="js/popper.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/main.js"></script>
     <script>
+        const allStaffOverrides = <?php echo json_encode($allOverrides); ?>;
+        const allRolePerms = <?php echo json_encode($allRolePerms); ?>;
+
         function openApproveModal(id, name, role) {
             document.getElementById('approveStaffId').value = id;
             document.getElementById('approveStaffName').textContent = name;
@@ -654,6 +799,32 @@ $gymName = get_setting('gym_name', 'Golden Eagle');
             document.getElementById('editStaffName').textContent = name;
             document.getElementById('editRoleSelect').value = role;
             $('#editRoleModal').modal('show');
+        }
+
+        function openPermissionsModal(id, name, role) {
+            document.getElementById('permStaffId').value = id;
+            document.getElementById('permStaffName').textContent = name;
+            document.getElementById('permStaffRoleBadge').textContent = role.toUpperCase();
+            
+            const staffOvr = allStaffOverrides[id] || {};
+            const roleP = allRolePerms[role] || {};
+
+            document.querySelectorAll('.perm-override-select').forEach(sel => {
+                const pKey = sel.getAttribute('data-perm');
+                if (typeof staffOvr[pKey] !== 'undefined') {
+                    sel.value = staffOvr[pKey] === 1 ? 'grant' : 'deny';
+                } else {
+                    sel.value = 'default';
+                }
+
+                const hintEl = document.getElementById('hint_' + pKey);
+                if (hintEl) {
+                    const isGrantedByRole = roleP[pKey] === true;
+                    hintEl.textContent = 'Role default (' + role + '): ' + (isGrantedByRole ? 'Allowed' : 'Denied');
+                }
+            });
+
+            $('#permissionsModal').modal('show');
         }
     </script>
 </body>

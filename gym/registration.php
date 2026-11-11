@@ -176,12 +176,12 @@ $gymTitle = get_setting('gym_name', 'GYM MS');
 			max-width: 620px;
 			margin: 36px auto;
 			padding: 36px 32px;
-			background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.92) 100%);
-			backdrop-filter: blur(36px) saturate(200%);
-			-webkit-backdrop-filter: blur(36px) saturate(200%);
-			border: 1px solid rgba(255, 255, 255, 0.16);
-			border-radius: 28px;
-			box-shadow: 0 30px 65px -15px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+			background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(11, 15, 25, 0.92) 100%);
+			backdrop-filter: blur(28px);
+			-webkit-backdrop-filter: blur(28px);
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			border-radius: 24px;
+			box-shadow: 0 25px 50px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.08);
 			position: relative;
 		}
 

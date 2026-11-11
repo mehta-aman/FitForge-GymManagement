@@ -3,14 +3,22 @@
 :root {
   --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif;
   --bg-deep: #07090e;
-  --bg-card: rgba(255, 255, 255, 0.06);
-  --bg-card-hover: rgba(255, 255, 255, 0.10);
-  --bg-card-elevated: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.13);
-  --glass-border-hover: rgba(255, 255, 255, 0.28);
-  --glass-blur: blur(28px) saturate(190%);
-  --glass-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55), 0 0 1px 1px rgba(255, 255, 255, 0.1);
-  --glass-specular: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+  --bg-card: rgba(15, 23, 42, 0.65);
+  --bg-card-hover: rgba(15, 23, 42, 0.80);
+  --bg-card-elevated: rgba(15, 23, 42, 0.90);
+  --bg-card-dark: rgba(15, 23, 42, 0.65);
+  --bg-card-dark-hover: rgba(15, 23, 42, 0.80);
+  --bg-card-dark-solid: #0f172a;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.18);
+  --glass-border-dark: rgba(255, 255, 255, 0.08);
+  --glass-border-dark-hover: rgba(255, 255, 255, 0.18);
+  --glass-blur: blur(24px);
+  --glass-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  --glass-shadow-dark: 0 10px 25px rgba(0, 0, 0, 0.45);
+  --glass-shadow-dark-hover: 0 14px 30px rgba(0, 0, 0, 0.55);
+  --glass-specular: inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+  --card-radius: 18px;
   --ios-spring: cubic-bezier(0.25, 1, 0.5, 1);
   --ios-spring-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
   --color-primary: #38bdf8;
@@ -103,19 +111,27 @@ body {
   z-index: 1;
 }
 
-/* Standard iOS Glass Panel */
-.ios-glass {
-  background: var(--bg-card);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow), var(--glass-specular);
-  border-radius: 24px;
-  transition: all 0.35s var(--ios-spring);
+/* Standard iOS Glass Panel & Common Dark Cards (Fitness Metrics Reference Design) */
+.ios-glass,
+.ios-dark-card,
+.dark-card,
+.metric-card-common {
+  background: var(--bg-card-dark, rgba(15, 23, 42, 0.65));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.08));
+  box-shadow: var(--glass-shadow-dark, 0 10px 25px rgba(0, 0, 0, 0.45));
+  border-radius: var(--card-radius, 18px);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.ios-glass:hover {
-  border-color: var(--glass-border-hover);
+.ios-glass:hover,
+.ios-dark-card:hover,
+.dark-card:hover,
+.metric-card-common:hover {
+  transform: translateY(-2px);
+  border-color: var(--glass-border-dark-hover, rgba(255, 255, 255, 0.18));
+  box-shadow: var(--glass-shadow-dark-hover, 0 14px 30px rgba(0, 0, 0, 0.55));
 }
 
 /* Floating Glass Navbar Capsule */
@@ -339,14 +355,14 @@ body {
 /* iOS Glass Pricing Card */
 .ios-pricing-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(28px) saturate(200%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 28px;
-  padding: 36px 28px;
-  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-  transition: all 0.4s var(--ios-spring);
+  background: var(--bg-card-dark, rgba(15, 23, 42, 0.68));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.08));
+  border-radius: 20px;
+  padding: 32px 26px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -361,16 +377,16 @@ body {
   left: 0;
   right: 0;
   height: 180px;
-  background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
   pointer-events: none;
-  transition: opacity 0.4s ease;
-  opacity: 0.6;
+  transition: opacity 0.3s ease;
+  opacity: 0.5;
 }
 
 .ios-pricing-card:hover {
-  transform: translateY(-8px) scale(1.015);
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.25);
+  transform: translateY(-4px);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.2);
 }
 
 .ios-pricing-card:hover::before {
@@ -479,13 +495,13 @@ body {
 .ios-auth-card {
   max-width: 480px;
   margin: 60px auto;
-  padding: 44px 36px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(32px) saturate(210%);
-  -webkit-backdrop-filter: blur(32px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 32px;
-  box-shadow: 0 35px 70px -15px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  padding: 40px 32px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(11, 15, 25, 0.92) 100%);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.08));
+  border-radius: 24px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.08);
   text-align: center;
 }
 
@@ -520,12 +536,12 @@ body {
 
 /* Tables in Glass */
 .ios-glass-table-wrapper {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  background: var(--bg-card-dark, rgba(15, 23, 42, 0.65));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.08));
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   margin: 25px 0;
 }

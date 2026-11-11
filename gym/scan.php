@@ -40,16 +40,16 @@ $memberName = $user ? ($user['fname'] . ' ' . $user['lname']) : 'Member';
         }
 
         .scanner-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 28px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(11, 15, 25, 0.95) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 22px;
             padding: 24px 20px;
             width: 100%;
             max-width: 440px;
             margin: 0 auto;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
             text-align: center;
         }
 

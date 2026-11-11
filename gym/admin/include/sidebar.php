@@ -66,6 +66,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       </ul>
     </li>
 
+    <!-- Lost & Found Desk (All Roles) -->
+    <li>
+      <a class="app-menu__item <?php echo ($currentPage == 'lost-found.php') ? 'active' : ''; ?>" href="lost-found.php">
+        <i class="app-menu__icon fa fa-archive" style="color: #38bdf8;"></i>
+        <span class="app-menu__label">Lost &amp; Found Desk</span>
+      </a>
+    </li>
+
     <!-- 3. Members & Subs (Owner, Manager, Trainer, Floor Staff lookup) -->
     <li class="treeview <?php echo in_array($currentPage, ['members.php', 'member-profile.php', 'member-create.php', 'memberships.php', 'trainers.php']) ? 'is-expanded' : ''; ?>">
       <a class="app-menu__item" href="#" data-toggle="treeview">
@@ -110,8 +118,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <li><a class="treeview-item <?php echo ($currentPage == 'categories.php') ? 'active' : ''; ?>" href="categories.php"><i class="icon fa fa-cubes"></i> Categories &amp; Types</a></li>
         </ul>
       </li>
+    <?php endif; ?>
 
-      <!-- 6. Payments & Bookings (Owner & Manager) -->
+    <!-- 6. Payments & Bookings (Option A: Strictly Owner Only) -->
+    <?php if ($adminRole === 'owner'): ?>
       <li class="treeview <?php echo in_array($currentPage, ['bookings.php', 'booking-history.php', 'new-bookings.php', 'partial-payment-bookings.php', 'full-payment-bookings.php', 'booking-history-details.php']) ? 'is-expanded' : ''; ?>">
         <a class="app-menu__item" href="#" data-toggle="treeview">
           <i class="app-menu__icon fa fa-credit-card"></i>
@@ -126,7 +136,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </ul>
       </li>
 
-      <!-- 7. Reports & Analytics (Owner & Manager) -->
+      <!-- 7. Reports & Analytics (Option A: Strictly Owner Only) -->
       <li class="treeview <?php echo in_array($currentPage, ['reports.php', 'report-expirations.php', 'report-dues.php', 'report-booking.php', 'report-registration.php']) ? 'is-expanded' : ''; ?>">
         <a class="app-menu__item" href="#" data-toggle="treeview">
           <i class="app-menu__icon fa fa-bar-chart"></i>
@@ -140,6 +150,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <li><a class="treeview-item <?php echo ($currentPage == 'report-booking.php') ? 'active' : ''; ?>" href="report-booking.php"><i class="icon fa fa-line-chart"></i> Sales &amp; Bookings</a></li>
           <li><a class="treeview-item <?php echo ($currentPage == 'report-registration.php') ? 'active' : ''; ?>" href="report-registration.php"><i class="icon fa fa-user-plus"></i> Member Sign-ups</a></li>
         </ul>
+      </li>
+    <?php endif; ?>
+
+    <!-- Refund Cases Queue (Owner & Authorized Managers - Option A Workflow Exception) -->
+    <?php if (is_owner() || ($adminRole === 'manager' && function_exists('has_permission') && (has_permission('refunds.view_assigned') || has_permission('approve_refund') || has_permission('execute_refund')))): ?>
+      <li>
+        <a class="app-menu__item <?php echo in_array($currentPage, ['refunds.php']) ? 'active' : ''; ?>" href="refunds.php">
+          <i class="app-menu__icon fa fa-undo" style="color: #fbbf24;"></i>
+          <span class="app-menu__label">Refund Cases</span>
+        </a>
       </li>
     <?php endif; ?>
 
@@ -157,7 +177,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </ul>
       </li>
 
-      <!-- 9. Settings (Owner Only) -->
+    <?php endif; ?>
+
+    <!-- 9. Settings (Owner & Manager) -->
+    <?php if (in_array($adminRole, ['owner', 'manager'])): ?>
       <li class="treeview <?php echo in_array($currentPage, ['settings.php', 'theme-settings.php', 'notifications-hub.php', 'change-password.php', 'profile.php']) ? 'is-expanded' : ''; ?>">
         <a class="app-menu__item" href="#" data-toggle="treeview">
           <i class="app-menu__icon fa fa-cogs"></i>
@@ -166,8 +189,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </a>
         <ul class="treeview-menu">
           <li><a class="treeview-item <?php echo ($currentPage == 'settings.php') ? 'active' : ''; ?>" href="settings.php"><i class="icon fa fa-sliders"></i> System Settings</a></li>
-          <li><a class="treeview-item <?php echo ($currentPage == 'notifications-hub.php') ? 'active' : ''; ?>" href="notifications-hub.php"><i class="icon fa fa-whatsapp"></i> Alerts &amp; WhatsApp</a></li>
-          <li><a class="treeview-item <?php echo ($currentPage == 'theme-settings.php') ? 'active' : ''; ?>" href="theme-settings.php"><i class="icon fa fa-magic"></i> Theme &amp; Appearance</a></li>
+          <?php if ($adminRole === 'owner'): ?>
+            <li><a class="treeview-item <?php echo ($currentPage == 'notifications-hub.php') ? 'active' : ''; ?>" href="notifications-hub.php"><i class="icon fa fa-whatsapp"></i> Alerts &amp; WhatsApp</a></li>
+            <li><a class="treeview-item <?php echo ($currentPage == 'theme-settings.php') ? 'active' : ''; ?>" href="theme-settings.php"><i class="icon fa fa-magic"></i> Theme &amp; Appearance</a></li>
+          <?php endif; ?>
           <li><a class="treeview-item <?php echo ($currentPage == 'profile.php') ? 'active' : ''; ?>" href="profile.php"><i class="icon fa fa-user"></i> Admin Profile</a></li>
         </ul>
       </li>

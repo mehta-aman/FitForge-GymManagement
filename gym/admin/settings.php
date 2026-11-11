@@ -1,10 +1,13 @@
 <?php
 require_once 'include/config.php';
-require_owner();
+require_role(['owner', 'manager']);
 
 $msg = '';
 $err = '';
-$activeTab = trim($_GET['tab'] ?? 'profile');
+$activeTab = trim($_GET['tab'] ?? (is_owner() ? 'profile' : 'policies'));
+if (!is_owner() && !in_array($activeTab, ['policies', 'payments'])) {
+    $activeTab = 'policies';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
@@ -40,13 +43,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         elseif ($section === 'policies') {
-            set_setting('default_plan_duration', intval($_POST['default_plan_duration'] ?? 3), 'membership');
-            set_setting('renewal_reminder_days', intval($_POST['renewal_reminder_days'] ?? 14), 'membership');
-            set_setting('grace_period_days', intval($_POST['grace_period_days'] ?? 7), 'membership');
-            set_setting('max_freeze_days', intval($_POST['max_freeze_days'] ?? 30), 'membership');
-            set_setting('freeze_requires_approval', isset($_POST['freeze_requires_approval']) ? '1' : '0', 'membership');
-            set_setting('cancellation_policy', trim($_POST['cancellation_policy'] ?? ''), 'membership');
-            $msg = "Membership lifecycle and policy rules saved successfully.";
+            if (!has_permission('manage_financial_policies')) {
+                $err = "You do not have permission to modify financial and membership policies.";
+            } else {
+                $oldType = get_setting('min_initial_payment_type', 'percentage');
+                $oldVal = get_setting('min_initial_payment_val', '50.00');
+
+                $newType = in_array($_POST['min_initial_payment_type'] ?? '', ['percentage', 'fixed']) ? $_POST['min_initial_payment_type'] : 'percentage';
+                $newVal = max(0.0, floatval($_POST['min_initial_payment_val'] ?? 50.00));
+                if ($newType === 'percentage' && $newVal > 100.0) {
+                    $newVal = 100.0;
+                }
+
+                $adminId = intval($_SESSION['adminid'] ?? 1);
+                if ($oldType !== $newType) {
+                    log_policy_audit('min_initial_payment_type', $oldType, $newType, $adminId, $dbh);
+                }
+                if (floatval($oldVal) !== $newVal) {
+                    log_policy_audit('min_initial_payment_val', (string)$oldVal, (string)$newVal, $adminId, $dbh);
+                }
+
+                set_setting('min_initial_payment_type', $newType, 'payment');
+                set_setting('min_initial_payment_val', number_format($newVal, 2, '.', ''), 'payment');
+
+                set_setting('default_plan_duration', intval($_POST['default_plan_duration'] ?? 3), 'membership');
+                set_setting('renewal_reminder_days', intval($_POST['renewal_reminder_days'] ?? 14), 'membership');
+                set_setting('grace_period_days', intval($_POST['grace_period_days'] ?? 7), 'membership');
+                set_setting('max_freeze_days', intval($_POST['max_freeze_days'] ?? 30), 'membership');
+                set_setting('freeze_requires_approval', isset($_POST['freeze_requires_approval']) ? '1' : '0', 'membership');
+                set_setting('cancellation_policy', trim($_POST['cancellation_policy'] ?? ''), 'membership');
+                $msg = "Membership lifecycle, access threshold, and policy rules saved successfully.";
+            }
         }
 
         elseif ($section === 'payments') {
@@ -362,6 +389,31 @@ $activePaymentMethods = explode(',', get_setting('payment_methods_enabled', 'cas
               <?php echo csrf_input(); ?>
               <input type="hidden" name="section" value="policies">
 
+              <!-- Minimum Initial Payment Access Policy -->
+              <div class="row" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 8px 4px 8px; margin: 0 0 20px 0;">
+                <div class="col-12 mb-2">
+                  <div style="font-size: 14px; font-weight: 700; color: #fff;">
+                    <i class="fa fa-shield text-warning" style="margin-right: 6px;"></i> Minimum Initial Payment Required for Gym Access
+                  </div>
+                  <div style="font-size: 12px; color: #94a3b8;">
+                    Members with partial payments can access the facility once their total net cleared payments satisfy this gym-wide threshold.
+                  </div>
+                </div>
+                <div class="col-md-6 form-group">
+                  <label style="font-weight: 600; font-size: 13.5px;">Threshold Representation Type</label>
+                  <select name="min_initial_payment_type" class="form-control">
+                    <option value="percentage" <?php echo get_setting('min_initial_payment_type', 'percentage') === 'percentage' ? 'selected' : ''; ?>>Percentage of Plan Net Fee (%)</option>
+                    <option value="fixed" <?php echo get_setting('min_initial_payment_type', 'percentage') === 'fixed' ? 'selected' : ''; ?>>Fixed Currency Amount (<?php echo get_currency_symbol(); ?>)</option>
+                  </select>
+                  <small class="form-text text-muted">Percentage scales across short and annual tiers; Fixed sets a flat deposit.</small>
+                </div>
+                <div class="col-md-6 form-group">
+                  <label style="font-weight: 600; font-size: 13.5px;">Threshold Value</label>
+                  <input type="number" step="0.01" min="0" max="100000" name="min_initial_payment_val" class="form-control" value="<?php echo htmlspecialchars(get_setting('min_initial_payment_val', '50.00')); ?>" required>
+                  <small class="form-text text-muted">E.g., 50.00 for 50%, or 1000.00 for fixed ₹1,000 threshold.</small>
+                </div>
+              </div>
+
               <div class="row">
                 <div class="col-md-6 form-group">
                   <label style="font-weight: 600; font-size: 13.5px;">Default Plan Duration (Months)</label>
@@ -404,6 +456,51 @@ $activePaymentMethods = explode(',', get_setting('payment_methods_enabled', 'cas
                 <i class="fa fa-save"></i> Save Membership Policies
               </button>
             </form>
+
+            <!-- Policy Audit Trail -->
+            <?php
+            $auditStmt = $dbh->query("
+              SELECT a.*, adm.name as admin_name, adm.role as admin_role
+              FROM tbl_policy_audit_log a
+              LEFT JOIN tbladmin adm ON a.changed_by_admin_id = adm.id
+              ORDER BY a.id DESC LIMIT 5
+            ");
+            $policyAudits = $auditStmt ? $auditStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            ?>
+            <?php if (!empty($policyAudits)): ?>
+              <div style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px;">
+                <h4 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px;">
+                  <i class="fa fa-history" style="color: var(--color-primary); margin-right: 6px;"></i> Configuration Change Audit Trail
+                </h4>
+                <div class="table-responsive">
+                  <table class="table table-hover table-bordered" style="margin: 0; font-size: 12.5px;">
+                    <thead>
+                      <tr>
+                        <th>Setting Key</th>
+                        <th>Old Value</th>
+                        <th>New Value</th>
+                        <th>Authorized Manager</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($policyAudits as $pa): ?>
+                      <tr>
+                        <td><code><?php echo htmlspecialchars($pa['setting_key']); ?></code></td>
+                        <td style="color: #94a3b8;"><?php echo htmlspecialchars($pa['old_value'] ?? 'None'); ?></td>
+                        <td style="color: #34d399; font-weight: 600;"><?php echo htmlspecialchars($pa['new_value'] ?? ''); ?></td>
+                        <td>
+                          <strong><?php echo htmlspecialchars($pa['admin_name'] ?? 'Admin'); ?></strong>
+                          <span style="color: #94a3b8; font-size: 11px;">(<?php echo htmlspecialchars(ucfirst($pa['admin_role'] ?? '')); ?>)</span>
+                        </td>
+                        <td style="color: #94a3b8;"><?php echo date('d M Y, h:i A', strtotime($pa['created_at'])); ?></td>
+                      </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            <?php endif; ?>
           </div>
 
         <!-- 5. Payment Settings Panel -->

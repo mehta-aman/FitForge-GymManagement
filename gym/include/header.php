@@ -117,8 +117,16 @@ body {
   <div class="ambient-orb ambient-orb-3"></div>
 </div>
 
+<?php
+$navHomeUrl = 'index.php';
+if (!empty($_SESSION['uid'])) {
+    $navHomeUrl = 'user-dashboard.php';
+} elseif (!empty($_SESSION['adminid'])) {
+    $navHomeUrl = 'admin/index.php';
+}
+?>
 <header class="ios-glass-navbar">
-  <a href="index.php" class="ios-nav-logo">
+  <a href="<?php echo $navHomeUrl; ?>" class="ios-nav-logo">
     <?php if ($gymLogo): ?>
       <img src="<?php echo htmlspecialchars($gymLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="Logo" style="max-height: 38px; border-radius: 8px;">
     <?php else: ?>
@@ -137,39 +145,51 @@ body {
   </a>
 
   <nav class="ios-nav-links">
-    <a href="index.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
-      <i class="fa fa-home"></i> Home
-    </a>
-    <a href="about.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : ''; ?>">
-      <i class="fa fa-info-circle"></i> About
-    </a>
-    <a href="contact.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
-      <i class="fa fa-envelope"></i> Contact
-    </a>
     <?php if(!empty($_SESSION['uid'])): ?>
-      <a href="scan.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>" style="color: #38bdf8;">
-        <i class="fa fa-camera"></i> Scan QR
-      </a>
+      <!-- Logged-in Member Portal Navigation (Clean, Member-Only, No Public Clutter) -->
       <a href="user-dashboard.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
-        <i class="fa fa-qrcode" style="color: #10b981;"></i> Digital Pass
+        <i class="fa fa-home"></i> Home
       </a>
       <a href="Booking-History.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'Booking-History.php' ? 'active' : ''; ?>">
         <i class="fa fa-calendar-check-o"></i> Bookings
       </a>
+      <a href="scan.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>" style="color: #38bdf8;">
+        <i class="fa fa-camera"></i> Scan QR
+      </a>
+      <a href="lost-found.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'lost-found.php' ? 'active' : ''; ?>">
+        <i class="fa fa-search text-warning"></i> Lost &amp; Found
+      </a>
       <a href="profile.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>">
         <i class="fa fa-user"></i> <?php echo htmlentities($_SESSION['name'] ?? 'Profile'); ?>
       </a>
-      <a href="logout.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px;">
+      <a href="logout.php" class="ios-btn ios-btn-glass" style="padding: 7px 14px; font-size: 12.5px; border-radius: 12px;">
         <i class="fa fa-sign-out"></i> Logout
       </a>
     <?php elseif(!empty($_SESSION['adminid'])): ?>
+      <!-- Staff & Admin Navigation -->
       <a href="admin/index.php" class="ios-btn ios-btn-primary" style="padding: 8px 16px; font-size: 13px;">
         <i class="fa fa-shield"></i> Staff Hub (<?php echo ucfirst($_SESSION['admin_role'] ?? 'Staff'); ?>)
+      </a>
+      <a href="lost-found.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'lost-found.php' ? 'active' : ''; ?>">
+        <i class="fa fa-search text-warning"></i> Lost &amp; Found
+      </a>
+      <a href="index.php?public=1" class="ios-btn ios-btn-glass" style="padding: 7px 14px; font-size: 12.5px; border-radius: 12px;">
+        <i class="fa fa-globe"></i> View Public Portal
       </a>
       <a href="admin/logout.php" class="ios-btn ios-btn-glass" style="padding: 8px 16px; font-size: 13px;">
         <i class="fa fa-sign-out"></i> Logout
       </a>
     <?php else: ?>
+      <!-- Public Portal Navigation (Unauthenticated Visitors) -->
+      <a href="index.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+        <i class="fa fa-home"></i> Home
+      </a>
+      <a href="about.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : ''; ?>">
+        <i class="fa fa-info-circle"></i> About
+      </a>
+      <a href="contact.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
+        <i class="fa fa-envelope"></i> Contact
+      </a>
       <a href="login.php" class="ios-nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'login.php' ? 'active' : ''; ?>">
         <i class="fa fa-sign-in"></i> Sign In
       </a>
@@ -238,35 +258,25 @@ body {
 
     <div class="ios-drawer-group" style="margin-bottom: 20px;">
       <div class="ios-drawer-label">Menu</div>
-      <a href="index.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
-        <span class="ios-link-icon"><i class="fa fa-home"></i></span>
-        <span class="ios-link-text">Home</span>
-        <i class="fa fa-angle-right ios-link-chevron"></i>
-      </a>
-      <a href="about.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : ''; ?>">
-        <span class="ios-link-icon"><i class="fa fa-info-circle"></i></span>
-        <span class="ios-link-text">About Gym</span>
-        <i class="fa fa-angle-right ios-link-chevron"></i>
-      </a>
-      <a href="contact.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
-        <span class="ios-link-icon"><i class="fa fa-envelope"></i></span>
-        <span class="ios-link-text">Contact &amp; Location</span>
-        <i class="fa fa-angle-right ios-link-chevron"></i>
-      </a>
       <?php if(!empty($_SESSION['uid'])): ?>
-        <a href="scan.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>">
-          <span class="ios-link-icon" style="color: #38bdf8;"><i class="fa fa-camera"></i></span>
-          <span class="ios-link-text">Scan Gym Attendance QR</span>
-          <i class="fa fa-angle-right ios-link-chevron"></i>
-        </a>
         <a href="user-dashboard.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
-          <span class="ios-link-icon" style="color: #10b981;"><i class="fa fa-qrcode"></i></span>
-          <span class="ios-link-text">Digital Pass &amp; Workouts</span>
+          <span class="ios-link-icon" style="color: #10b981;"><i class="fa fa-home"></i></span>
+          <span class="ios-link-text">Home</span>
           <i class="fa fa-angle-right ios-link-chevron"></i>
         </a>
         <a href="Booking-History.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'Booking-History.php' ? 'active' : ''; ?>">
           <span class="ios-link-icon"><i class="fa fa-calendar-check-o"></i></span>
           <span class="ios-link-text">My Bookings</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+        <a href="scan.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon" style="color: #38bdf8;"><i class="fa fa-camera"></i></span>
+          <span class="ios-link-text">Scan Gym Attendance QR</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+        <a href="lost-found.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'lost-found.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon" style="color: #fbbf24;"><i class="fa fa-search"></i></span>
+          <span class="ios-link-text">Lost &amp; Found Hub</span>
           <i class="fa fa-angle-right ios-link-chevron"></i>
         </a>
         <a href="profile.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>">
@@ -277,6 +287,38 @@ body {
         <a href="changepassword.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'changepassword.php' ? 'active' : ''; ?>">
           <span class="ios-link-icon"><i class="fa fa-key"></i></span>
           <span class="ios-link-text">Change Password</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+      <?php elseif(!empty($_SESSION['adminid'])): ?>
+        <a href="admin/index.php" class="ios-drawer-link">
+          <span class="ios-link-icon"><i class="fa fa-shield"></i></span>
+          <span class="ios-link-text">Staff Control Center</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+        <a href="lost-found.php" class="ios-drawer-link">
+          <span class="ios-link-icon" style="color: #fbbf24;"><i class="fa fa-search"></i></span>
+          <span class="ios-link-text">Lost &amp; Found Hub</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+        <a href="index.php?public=1" class="ios-drawer-link">
+          <span class="ios-link-icon" style="color: #a855f7;"><i class="fa fa-globe"></i></span>
+          <span class="ios-link-text">View Public Portal</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+      <?php else: ?>
+        <a href="index.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon"><i class="fa fa-home"></i></span>
+          <span class="ios-link-text">Home</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+        <a href="about.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon"><i class="fa fa-info-circle"></i></span>
+          <span class="ios-link-text">About Gym</span>
+          <i class="fa fa-angle-right ios-link-chevron"></i>
+        </a>
+        <a href="contact.php" class="ios-drawer-link <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
+          <span class="ios-link-icon"><i class="fa fa-envelope"></i></span>
+          <span class="ios-link-text">Contact &amp; Location</span>
           <i class="fa fa-angle-right ios-link-chevron"></i>
         </a>
       <?php endif; ?>

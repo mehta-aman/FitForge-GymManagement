@@ -3,6 +3,7 @@ require_once 'include/config.php';
 require_once 'include/fitness_metrics.php';
 require_once 'include/exercise_catalog.php';
 require_once 'include/workout_presets.php';
+require_once 'include/lost_found_helper.php';
 
 if (empty($_SESSION['uid'])) {
     header('location:login.php');
@@ -622,6 +623,11 @@ $exerciseMuscleGroups = get_exercise_muscle_groups();
 $systemWorkoutPresets = get_system_workout_presets();
 $userWorkoutPresets = get_user_workout_presets($userId, $dbh);
 
+// E. Member Lost & Found Items
+$userLfStmt = $dbh->prepare("SELECT * FROM tbl_lost_found WHERE author_type = 'user' AND author_id = ? ORDER BY created_at DESC");
+$userLfStmt->execute([$userId]);
+$userLostFoundItems = $userLfStmt->fetchAll(PDO::FETCH_ASSOC);
+
 $gymName = get_setting('gym_name', 'Golden Eagle Gym');
 $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
 ?>
@@ -738,12 +744,14 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       padding: 20px 22px;
       margin-bottom: 20px;
       height: calc(100% - 20px);
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
     
     .metric-card:hover {
       transform: translateY(-2px);
       border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
     }
     
     .metric-icon-wrap {
@@ -1084,6 +1092,129 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         color: #000 !important;
       }
     }
+
+    /* Master Exercise Catalog & Grid Styling */
+    .exercise-catalog-card {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 18px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .exercise-catalog-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+    }
+    .catalog-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #94a3b8;
+      background: #0b0f19;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    .catalog-filter-btn:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .catalog-filter-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(99, 102, 241, 0.3) 100%);
+      border-color: rgba(56, 189, 248, 0.45);
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.18);
+      font-weight: 700;
+    }
+    .catalog-mode-toggle {
+      display: inline-flex;
+      background: #070a12;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .catalog-mode-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .catalog-mode-btn:hover {
+      color: #fff;
+    }
+    .catalog-mode-btn.active {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      font-weight: 700;
+    }
+    .ios-pagination {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .ios-pagination .page-item .page-link {
+      background: #0b0f19;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      padding: 7px 13px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ios-pagination .page-item:not(.disabled) .page-link:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .ios-pagination .page-item.active .page-link {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.3) 0%, rgba(99, 102, 241, 0.35) 100%);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+      font-weight: 700;
+    }
+    .ios-pagination .page-item.disabled .page-link {
+      opacity: 0.35;
+      cursor: not-allowed;
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.04);
+    }
   </style>
 </head>
 <body>
@@ -1191,6 +1322,9 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       </a>
       <a href="#report" class="profile-tab-btn" onclick="switchProfileTab('tab-report', this)">
         <i class="fa fa-file-text-o"></i> Fitness Report
+      </a>
+      <a href="#lostfound" class="profile-tab-btn" onclick="switchProfileTab('tab-lostfound', this)">
+        <i class="fa fa-archive"></i> Lost &amp; Found<?php if (!empty($userLostFoundItems)): ?> <span class="badge" style="background:#f97316; font-size:10px; margin-left:4px;"><?php echo count($userLostFoundItems); ?></span><?php endif; ?>
       </a>
     </div>
 
@@ -1891,7 +2025,7 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             </div>
           </div>
 
-          <!-- Category Quick Filter Chips -->
+          <!-- Category Quick Filter Chips / Tabs -->
           <div style="margin-top: 14px; overflow-x: auto; white-space: nowrap; padding-bottom: 4px;">
             <span class="catalog-filter-btn active" data-cat="all" onclick="setCatalogCategory('all', this)">All Categories (<?php echo count($masterExercises); ?>)</span>
             <span class="catalog-filter-btn" data-cat="floor" onclick="setCatalogCategory('floor', this)"><i class="fa fa-user"></i> Gym Floor / Bodyweight</span>
@@ -1901,6 +2035,62 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             <span class="catalog-filter-btn" data-cat="machines" onclick="setCatalogCategory('machines', this)"><i class="fa fa-cogs"></i> Machines &amp; Cables</span>
             <span class="catalog-filter-btn" data-cat="functional" onclick="setCatalogCategory('functional', this)"><i class="fa fa-refresh"></i> Functional &amp; Mobility</span>
           </div>
+
+          <!-- View Mode & Grid Density Customization Toolbar -->
+          <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <!-- Left: View Mode Switcher (Pages vs Load More) -->
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em;">View Mode:</span>
+              <div class="catalog-mode-toggle">
+                <button type="button" class="catalog-mode-btn active" data-mode="pages" onclick="setCatalogViewMode('pages')" title="Numbered pagination for a clean, decluttered layout">
+                  <i class="fa fa-clone"></i> Pages Mode
+                </button>
+                <button type="button" class="catalog-mode-btn" data-mode="load_more" onclick="setCatalogViewMode('load_more')" title="Load initial batch and smoothly expand with a button">
+                  <i class="fa fa-arrow-circle-down"></i> Load More Mode
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: Grid Size & Columns Selectors -->
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <!-- Grid Size Selector (Exercises Per Page / Batch) -->
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="catalogPageSizeSelect" style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #94a3b8; white-space: nowrap;">
+                  Grid Size:
+                </label>
+                <select id="catalogPageSizeSelect" class="ios-input" onchange="setCatalogPageSize(this.value)" style="padding: 6px 10px; font-size: 12px; width: auto; min-width: 180px;">
+                  <option value="12" selected>12 / page (Recommended — 4x3 Grid)</option>
+                  <option value="6">6 / page (Compact 2x3 Grid)</option>
+                  <option value="18">18 / page (Balanced 6x3 Grid)</option>
+                  <option value="24">24 / page (Large 8x3 Grid)</option>
+                  <option value="36">36 / page (Extended 12x3 Grid)</option>
+                  <option value="all">All Exercises (No limit)</option>
+                </select>
+              </div>
+
+              <!-- Columns / Density Selector -->
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="catalogGridColsSelect" style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #94a3b8; white-space: nowrap;">
+                  Columns:
+                </label>
+                <select id="catalogGridColsSelect" class="ios-input" onchange="setCatalogGridCols(this.value)" style="padding: 6px 10px; font-size: 12px; width: auto;">
+                  <option value="3" selected>3 Columns (Standard)</option>
+                  <option value="2">2 Columns (Detailed)</option>
+                  <option value="4">4 Columns (Compact)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Status Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; flex-wrap: wrap; gap: 8px;">
+          <span id="catalogPageSummary" style="font-size: 13px; color: #94a3b8; font-weight: 600;">
+            Showing 1–12 of <?php echo count($masterExercises); ?> exercises
+          </span>
+          <span style="font-size: 11.5px; color: #64748b;">
+            <i class="fa fa-info-circle text-info"></i> Click <strong>+ Add to Routine</strong> on any movement to schedule
+          </span>
         </div>
 
         <!-- Exercise Cards Container Grid -->
@@ -1975,6 +2165,40 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
               </div>
             </div>
           <?php endforeach; ?>
+        </div>
+
+        <!-- Pagination Controls (Pages Mode) -->
+        <div id="catalogPaginationWrapper" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+          <ul class="ios-pagination" id="catalogPaginationList">
+            <!-- Dynamically populated by renderPaginationButtons() -->
+          </ul>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #94a3b8;">
+            <span>Go to page:</span>
+            <input type="number" id="catalogPageDirectInput" min="1" value="1" class="ios-input" style="width: 55px; padding: 5px 8px; font-size: 12.5px; text-align: center;" onchange="catalogGoToPage(parseInt(this.value, 10))">
+            <span>of <strong id="catalogTotalPagesLabel" style="color: #fff;">1</strong></span>
+          </div>
+        </div>
+
+        <!-- Load More Controls (Load More Mode) -->
+        <div id="catalogLoadMoreWrapper" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); text-align: center;">
+          <div style="max-width: 380px; margin: 0 auto 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #94a3b8; margin-bottom: 6px;">
+              <span>Catalog Progress</span>
+              <span id="catalogProgressText" style="color: #38bdf8; font-weight: 700;">12 of <?php echo count($masterExercises); ?> loaded (3%)</span>
+            </div>
+            <div style="height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden;">
+              <div id="catalogProgressBar" style="width: 3%; height: 100%; background: linear-gradient(90deg, #38bdf8, #6366f1); border-radius: 4px; transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <button type="button" id="catalogLoadMoreBtn" class="ios-btn ios-btn-primary" style="padding: 10px 24px; font-weight: 700; border-radius: 12px;" onclick="catalogLoadMore()">
+              <i class="fa fa-arrow-down" style="margin-right: 6px;"></i> Load More Exercises (+12)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-light" style="border-radius: 10px; font-size: 12px; padding: 8px 16px;" onclick="catalogShowAll()">
+              Show All Remaining
+            </button>
+          </div>
         </div>
 
         <div id="catalogEmptyMessage" style="display: none; text-align: center; padding: 40px 20px; color: #64748b;">
@@ -2614,6 +2838,106 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         <div style="background: rgba(255,255,255,0.02); border-radius: 10px; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.06); font-size: 11.5px; color: #94a3b8; line-height: 1.5;">
           <strong>Clinical &amp; Screening Notice:</strong> All mathematical estimates (BMI, BMR, TDEE, Caloric Targets, and Macronutrient Allocations) are computational models intended for sports training and general wellness screening. They do not constitute diagnostic medical advice, clinical dietetics, or prescribed disease treatment. Consult a licensed physician or certified sports dietitian before undertaking intensive caloric restriction or significant training changes.
         </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================== -->
+    <!-- TAB 8: LOST & FOUND -->
+    <!-- ======================================================================== -->
+    <div id="tab-lostfound" class="tab-content-panel">
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 24px; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px;">
+          <div>
+            <h4 style="color: #fff; margin: 0 0 6px 0; font-size: 20px; font-weight: 700;">
+              <i class="fa fa-archive" style="color: #f97316; margin-right: 8px;"></i> My Lost &amp; Found Items
+            </h4>
+            <p style="color: #94a3b8; font-size: 13px; margin: 0;">
+              Track items you have reported lost or found at the gym, check status, or browse community matches.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <a href="lost-found.php" class="ios-btn ios-btn-primary" style="text-decoration: none;">
+              <i class="fa fa-external-link"></i> Community Lost &amp; Found Hub
+            </a>
+          </div>
+        </div>
+
+        <?php if (empty($userLostFoundItems)): ?>
+          <div style="text-align: center; padding: 50px 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(249, 115, 22, 0.15); color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 16px;">
+              <i class="fa fa-archive"></i>
+            </div>
+            <h5 style="color: #fff; font-weight: 600; margin-bottom: 8px;">No Reported Items Yet</h5>
+            <p style="color: #94a3b8; font-size: 13px; max-width: 440px; margin: 0 auto 20px;">
+              Misplaced your water bottle, headphones, or lifting gear? Or found something belonging to a fellow member? Report it on the community board!
+            </p>
+            <a href="lost-found.php" class="ios-btn ios-btn-primary" style="text-decoration: none;">
+              <i class="fa fa-plus"></i> Report an Item Now
+            </a>
+          </div>
+        <?php else: ?>
+          <div class="row">
+            <?php foreach ($userLostFoundItems as $item): 
+              $catInfo = get_category_info($item['category']);
+              $hasPhoto = !empty($item['image_path']) && file_exists(__DIR__ . '/' . $item['image_path']);
+            ?>
+              <div class="col-md-6 col-lg-4" style="margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; height: 100%;">
+                  <!-- Image / Icon Header -->
+                  <div style="height: 140px; background: rgba(0,0,0,0.3); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <?php if ($hasPhoto): ?>
+                      <img src="<?php echo htmlspecialchars($item['image_path']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php else: ?>
+                      <div style="text-align: center; color: <?php echo $catInfo['color']; ?>;">
+                        <i class="fa <?php echo $catInfo['icon']; ?>" style="font-size: 48px; opacity: 0.8;"></i>
+                      </div>
+                    <?php endif; ?>
+                    <div style="position: absolute; top: 10px; left: 10px;">
+                      <?php if ($item['item_type'] === 'lost'): ?>
+                        <span class="badge" style="background: #ef4444; font-weight: 700; font-size: 11px;">LOST</span>
+                      <?php else: ?>
+                        <span class="badge" style="background: #10b981; font-weight: 700; font-size: 11px;">FOUND</span>
+                      <?php endif; ?>
+                    </div>
+                    <div style="position: absolute; top: 10px; right: 10px;">
+                      <?php echo get_item_status_badge($item['status'], $item['item_type']); ?>
+                    </div>
+                  </div>
+
+                  <!-- Content Body -->
+                  <div style="padding: 16px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                      <div style="margin-bottom: 8px;">
+                        <?php echo get_category_badge($item['category']); ?>
+                      </div>
+                      <h5 style="color: #fff; font-size: 16px; font-weight: 700; margin: 0 0 6px 0;">
+                        <?php echo htmlspecialchars($item['title']); ?>
+                      </h5>
+                      <p style="color: #94a3b8; font-size: 12.5px; line-height: 1.5; margin: 0 0 12px 0;">
+                        <?php echo nl2br(htmlspecialchars($item['caption'])); ?>
+                      </p>
+                    </div>
+
+                    <div>
+                      <div style="font-size: 11.5px; color: #64748b; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px;">
+                        <?php if (!empty($item['location_in_gym'])): ?>
+                          <div><i class="fa fa-map-marker" style="color: #38bdf8; width: 14px;"></i> <?php echo htmlspecialchars($item['location_in_gym']); ?></div>
+                        <?php endif; ?>
+                        <div><i class="fa fa-calendar-o" style="color: #94a3b8; width: 14px;"></i> Reported: <?php echo date('d M Y', strtotime($item['date_reported'])); ?></div>
+                      </div>
+
+                      <div style="display: flex; gap: 8px;">
+                        <a href="lost-found.php?type=my" class="ios-btn" style="flex: 1; text-align: center; font-size: 12px; padding: 6px 10px; background: rgba(255,255,255,0.08); color: #fff; text-decoration: none;">
+                          <i class="fa fa-eye"></i> View in Hub
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -3857,8 +4181,15 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       });
     }
 
-    // Filter Master Exercise Catalog by Search, Category & Muscle
+    // ========================================================================
+    // MASTER EXERCISE CATALOG — PAGINATION, LOAD-MORE & GRID ENGINE
+    // ========================================================================
     let currentCatalogCategory = 'all';
+    let catalogViewMode = 'pages'; // 'pages' or 'load_more'
+    let catalogPageSize = 12; // 12 default (mathematically perfect 4x3 grid)
+    let catalogCurrentPage = 1;
+    let catalogLoadedCount = 12;
+    let catalogGridCols = 3;
 
     function setCatalogCategory(catKey, btn) {
       currentCatalogCategory = catKey;
@@ -3866,16 +4197,61 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         b.classList.remove('active');
       });
       if (btn) btn.classList.add('active');
-      filterCatalogExercises();
+      catalogCurrentPage = 1;
+      catalogLoadedCount = catalogPageSize;
+      renderCatalog(false);
     }
 
-    function filterCatalogExercises() {
+    function setCatalogViewMode(mode) {
+      catalogViewMode = mode;
+      document.querySelectorAll('.catalog-mode-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      const activeBtn = document.querySelector('.catalog-mode-btn[data-mode="' + mode + '"]');
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const pageNav = document.getElementById('catalogPaginationWrapper');
+      const loadMoreNav = document.getElementById('catalogLoadMoreWrapper');
+      if (pageNav && loadMoreNav) {
+        pageNav.style.display = (mode === 'pages') ? 'flex' : 'none';
+        loadMoreNav.style.display = (mode === 'load_more') ? 'block' : 'none';
+      }
+
+      catalogCurrentPage = 1;
+      catalogLoadedCount = catalogPageSize;
+      renderCatalog(false);
+    }
+
+    function setCatalogPageSize(size) {
+      catalogPageSize = (size === 'all') ? 999999 : parseInt(size, 10);
+      catalogCurrentPage = 1;
+      catalogLoadedCount = catalogPageSize;
+      renderCatalog(false);
+    }
+
+    function setCatalogGridCols(cols) {
+      catalogGridCols = parseInt(cols, 10);
+      const container = document.getElementById('catalogCardsContainer');
+      if (!container) return;
+      const items = container.querySelectorAll('.catalog-item');
+      items.forEach(function(item) {
+        item.classList.remove('col-lg-4', 'col-lg-6', 'col-lg-3');
+        if (catalogGridCols === 2) {
+          item.classList.add('col-lg-6');
+        } else if (catalogGridCols === 4) {
+          item.classList.add('col-lg-3');
+        } else {
+          item.classList.add('col-lg-4');
+        }
+      });
+    }
+
+    function getFilteredCatalogItems() {
       const search = (document.getElementById('catalogSearchInput')?.value || '').toLowerCase().trim();
       const muscle = document.getElementById('catalogMuscleFilter')?.value || 'all';
-      const items = document.querySelectorAll('.catalog-item');
-      let visibleCount = 0;
+      const items = Array.from(document.querySelectorAll('.catalog-item'));
 
-      items.forEach(function(item) {
+      return items.filter(function(item) {
         const itemCat = item.getAttribute('data-category');
         const itemMuscle = item.getAttribute('data-muscle');
         const itemName = item.getAttribute('data-name');
@@ -3885,23 +4261,198 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
         const matchesMuscle = (muscle === 'all' || itemMuscle === muscle);
         const matchesSearch = (!search || itemName.includes(search) || itemEquip.includes(search) || itemMuscle.toLowerCase().includes(search));
 
-        if (matchesCat && matchesMuscle && matchesSearch) {
-          item.style.display = '';
-          visibleCount++;
-        } else {
-          item.style.display = 'none';
-        }
+        return matchesCat && matchesMuscle && matchesSearch;
+      });
+    }
+
+    function renderCatalog(scrollUp = false) {
+      const allItems = Array.from(document.querySelectorAll('.catalog-item'));
+      const matchingItems = getFilteredCatalogItems();
+      const totalMatches = matchingItems.length;
+
+      // Hide all items initially
+      allItems.forEach(function(item) {
+        item.style.display = 'none';
       });
 
-      const badge = document.getElementById('catalogCountBadge');
-      if (badge) {
-        badge.textContent = visibleCount + ' Exercises Available';
+      const emptyMsg = document.getElementById('catalogEmptyMessage');
+      const countBadge = document.getElementById('catalogCountBadge');
+      const summarySpan = document.getElementById('catalogPageSummary');
+      const pageNav = document.getElementById('catalogPaginationWrapper');
+      const loadMoreNav = document.getElementById('catalogLoadMoreWrapper');
+
+      if (countBadge) {
+        countBadge.textContent = totalMatches + ' Exercises Available';
       }
 
-      const emptyMsg = document.getElementById('catalogEmptyMessage');
-      if (emptyMsg) {
-        emptyMsg.style.display = (visibleCount === 0) ? 'block' : 'none';
+      if (totalMatches === 0) {
+        if (emptyMsg) emptyMsg.style.display = 'block';
+        if (pageNav) pageNav.style.display = 'none';
+        if (loadMoreNav) loadMoreNav.style.display = 'none';
+        if (summarySpan) summarySpan.textContent = 'Showing 0 exercises';
+        return;
+      } else {
+        if (emptyMsg) emptyMsg.style.display = 'none';
       }
+
+      if (catalogViewMode === 'pages') {
+        if (loadMoreNav) loadMoreNav.style.display = 'none';
+        if (pageNav) pageNav.style.display = 'flex';
+
+        const totalPages = Math.max(1, Math.ceil(totalMatches / catalogPageSize));
+        if (catalogCurrentPage > totalPages) catalogCurrentPage = totalPages;
+        if (catalogCurrentPage < 1) catalogCurrentPage = 1;
+
+        const startIdx = (catalogCurrentPage - 1) * catalogPageSize;
+        const endIdx = Math.min(startIdx + catalogPageSize, totalMatches);
+
+        for (let i = startIdx; i < endIdx; i++) {
+          matchingItems[i].style.display = '';
+        }
+
+        if (summarySpan) {
+          summarySpan.textContent = `Showing ${startIdx + 1}–${endIdx} of ${totalMatches} exercises (Page ${catalogCurrentPage} of ${totalPages})`;
+        }
+
+        renderPaginationButtons(totalPages);
+
+      } else {
+        // Load More Mode
+        if (pageNav) pageNav.style.display = 'none';
+        if (loadMoreNav) loadMoreNav.style.display = 'block';
+
+        const showCount = Math.min(catalogLoadedCount, totalMatches);
+
+        for (let i = 0; i < showCount; i++) {
+          matchingItems[i].style.display = '';
+        }
+
+        if (summarySpan) {
+          summarySpan.textContent = `Showing ${showCount} of ${totalMatches} exercises`;
+        }
+
+        // Progress meter
+        const pct = Math.round((showCount / totalMatches) * 100);
+        const pBar = document.getElementById('catalogProgressBar');
+        if (pBar) pBar.style.width = pct + '%';
+        const pText = document.getElementById('catalogProgressText');
+        if (pText) pText.textContent = `${showCount} of ${totalMatches} loaded (${pct}%)`;
+
+        // Load more action button
+        const loadMoreBtn = document.getElementById('catalogLoadMoreBtn');
+        if (loadMoreBtn) {
+          if (showCount >= totalMatches) {
+            loadMoreBtn.style.display = 'none';
+          } else {
+            loadMoreBtn.style.display = 'inline-flex';
+            const nextBatch = Math.min(catalogPageSize, totalMatches - showCount);
+            loadMoreBtn.innerHTML = `<i class="fa fa-arrow-down" style="margin-right: 6px;"></i> Load More Exercises (+${nextBatch})`;
+          }
+        }
+      }
+
+      if (scrollUp) {
+        const sec = document.getElementById('exerciseCatalogSection');
+        if (sec) {
+          sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+
+    function renderPaginationButtons(totalPages) {
+      const container = document.getElementById('catalogPaginationList');
+      const wrapper = document.getElementById('catalogPaginationWrapper');
+      if (!container || !wrapper) return;
+      container.innerHTML = '';
+
+      if (totalPages <= 1) {
+        wrapper.style.display = 'none';
+        return;
+      }
+      wrapper.style.display = 'flex';
+
+      // Previous button
+      const prevLi = document.createElement('li');
+      prevLi.className = 'page-item' + (catalogCurrentPage === 1 ? ' disabled' : '');
+      prevLi.innerHTML = `<a class="page-link" href="javascript:void(0)" onclick="catalogGoToPage(${catalogCurrentPage - 1})"><i class="fa fa-angle-left"></i> Prev</a>`;
+      container.appendChild(prevLi);
+
+      // Compact smart pagination window
+      let pages = [];
+      if (totalPages <= 7) {
+        for (let p = 1; p <= totalPages; p++) pages.push(p);
+      } else {
+        pages.push(1);
+        if (catalogCurrentPage > 3) pages.push('...');
+
+        let start = Math.max(2, catalogCurrentPage - 1);
+        let end = Math.min(totalPages - 1, catalogCurrentPage + 1);
+
+        if (catalogCurrentPage <= 3) {
+          start = 2;
+          end = 4;
+        } else if (catalogCurrentPage >= totalPages - 2) {
+          start = totalPages - 3;
+          end = totalPages - 1;
+        }
+
+        for (let p = start; p <= end; p++) pages.push(p);
+        if (catalogCurrentPage < totalPages - 2) pages.push('...');
+        pages.push(totalPages);
+      }
+
+      pages.forEach(function(p) {
+        const li = document.createElement('li');
+        if (p === '...') {
+          li.className = 'page-item disabled';
+          li.innerHTML = `<span class="page-link" style="background: transparent; border: none; color: #64748b;">...</span>`;
+        } else {
+          li.className = 'page-item' + (p === catalogCurrentPage ? ' active' : '');
+          li.innerHTML = `<a class="page-link" href="javascript:void(0)" onclick="catalogGoToPage(${p})">${p}</a>`;
+        }
+        container.appendChild(li);
+      });
+
+      // Next button
+      const nextLi = document.createElement('li');
+      nextLi.className = 'page-item' + (catalogCurrentPage === totalPages ? ' disabled' : '');
+      nextLi.innerHTML = `<a class="page-link" href="javascript:void(0)" onclick="catalogGoToPage(${catalogCurrentPage + 1})">Next <i class="fa fa-angle-right"></i></a>`;
+      container.appendChild(nextLi);
+
+      // Direct page jump inputs
+      const pageInput = document.getElementById('catalogPageDirectInput');
+      if (pageInput) {
+        pageInput.max = totalPages;
+        pageInput.value = catalogCurrentPage;
+      }
+      const totalPagesLabel = document.getElementById('catalogTotalPagesLabel');
+      if (totalPagesLabel) {
+        totalPagesLabel.textContent = totalPages;
+      }
+    }
+
+    function catalogGoToPage(p) {
+      const matchingItems = getFilteredCatalogItems();
+      const totalPages = Math.max(1, Math.ceil(matchingItems.length / catalogPageSize));
+      if (p < 1 || p > totalPages) return;
+      catalogCurrentPage = p;
+      renderCatalog(true);
+    }
+
+    function catalogLoadMore() {
+      catalogLoadedCount += catalogPageSize;
+      renderCatalog(false);
+    }
+
+    function catalogShowAll() {
+      catalogLoadedCount = 999999;
+      renderCatalog(false);
+    }
+
+    function filterCatalogExercises() {
+      catalogCurrentPage = 1;
+      catalogLoadedCount = catalogPageSize;
+      renderCatalog(false);
     }
 
     function sortCatalogExercises() {
@@ -3928,14 +4479,27 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
       items.forEach(function(item) {
         container.appendChild(item);
       });
+
+      renderCatalog(false);
     }
 
     function resetCatalogFilters() {
-      document.getElementById('catalogSearchInput').value = '';
-      document.getElementById('catalogMuscleFilter').value = 'all';
-      document.getElementById('catalogSortOrder').value = 'category';
+      const sInput = document.getElementById('catalogSearchInput');
+      if (sInput) sInput.value = '';
+      const mFilter = document.getElementById('catalogMuscleFilter');
+      if (mFilter) mFilter.value = 'all';
+      const sOrder = document.getElementById('catalogSortOrder');
+      if (sOrder) sOrder.value = 'category';
+      const pSize = document.getElementById('catalogPageSizeSelect');
+      if (pSize) pSize.value = '12';
+      catalogPageSize = 12;
       setCatalogCategory('all', document.querySelector('.catalog-filter-btn[data-cat="all"]'));
     }
+
+    // Initialize Catalog on Page Load so initial view shows only 12 cards cleanly
+    document.addEventListener('DOMContentLoaded', function() {
+      renderCatalog(false);
+    });
 
     // Metric <-> Imperial Unit Auto-Conversion on Form
     function toggleFormUnits(unit) {

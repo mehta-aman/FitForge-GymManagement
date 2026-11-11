@@ -2,6 +2,13 @@
 require_once 'include/config.php';
 $uid = $_SESSION['uid'] ?? null;
 
+// Logged-in Member Portal Redirection:
+// Route member directly to their Welcome Dashboard unless explicitly requesting public portal (?public=1)
+if (!empty($uid) && empty($_GET['public']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('location: user-dashboard.php');
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) { 
   if (!verify_csrf_token()) {
     echo "<script>alert('Security validation failed (CSRF token invalid). Please refresh and try again.');</script>";
@@ -67,6 +74,16 @@ $heroCtaLink = get_setting('hero_cta_link', '#plans');
 
 	<!-- Floating iOS Capsule Navbar -->
 	<?php include 'include/header.php';?>
+
+	<?php if (!empty($uid) && !empty($_GET['public'])): ?>
+		<div style="background: rgba(56, 189, 248, 0.12); border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding: 10px 20px; text-align: center; font-size: 13px; color: #e0f2fe; backdrop-filter: blur(12px);">
+			<i class="fa fa-info-circle" style="color: #38bdf8; margin-right: 6px;"></i>
+			You are previewing the public portal as a signed-in member.
+			<a href="user-dashboard.php" class="ios-btn ios-btn-primary" style="margin-left: 12px; padding: 4px 14px; font-size: 12px; text-decoration: none; border-radius: 8px;">
+				<i class="fa fa-th-large"></i> Return to Member Dashboard
+			</a>
+		</div>
+	<?php endif; ?>
 
 	<div class="site-content-wrapper">
 		<!-- Hero Section -->

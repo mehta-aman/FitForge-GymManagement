@@ -39,6 +39,7 @@ try {
 // Load Core Services
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/membership_engine.php';
 
 // Initialize hardened session
 init_secure_session();
@@ -47,9 +48,11 @@ init_secure_session();
 load_all_settings($dbh);
 
 // Tenant Context Helper (Foundational Multi-Gym Readiness)
-function get_current_gym_id() {
-    if (!empty($_SESSION['gym_id'])) {
-        return intval($_SESSION['gym_id']);
+if (!function_exists('get_current_gym_id')) {
+    function get_current_gym_id() {
+        if (!empty($_SESSION['gym_id'])) {
+            return intval($_SESSION['gym_id']);
+        }
+        return 1; // Default tenant organization
     }
-    return 1; // Default tenant organization
 }

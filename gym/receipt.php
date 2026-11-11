@@ -27,11 +27,11 @@ if (!$booking) {
     exit("Booking record not found.");
 }
 
-// Authorization guard: Admin or the owning Member
-$isAdmin = !empty($_SESSION['adminid']);
-$isOwner = !empty($_SESSION['uid']) && (intval($_SESSION['uid']) === intval($booking['userid']));
+// Authorization guard: Owner Admin or the owning Member (Option A: Restricted Manager Financial Access)
+$isOwnerAdmin = !empty($_SESSION['adminid']) && function_exists('is_owner') && is_owner();
+$isOwningMember = !empty($_SESSION['uid']) && (intval($_SESSION['uid']) === intval($booking['userid']));
 
-if (!$isAdmin && !$isOwner) {
+if (!$isOwnerAdmin && !$isOwningMember) {
     http_response_code(403);
     exit("Access Denied: You do not have permission to inspect this receipt.");
 }
@@ -47,16 +47,18 @@ $payStmt->execute([$bookingId]);
 $allPayments = $payStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $totalCollected = 0;
+$totalRefunded = 0;
 $activePayment = null;
 foreach ($allPayments as $p) {
     $totalCollected += floatval($p['payment']);
+    $totalRefunded += floatval($p['refunded_amount'] ?? 0);
     if ($payId > 0 && $p['id'] == $payId) {
         $activePayment = $p;
     }
 }
 
-// If specific installment requested, show its amount; else show total collected
-$amountForThisReceipt = $activePayment ? floatval($activePayment['payment']) : $totalCollected;
+// If specific installment requested, show its net amount; else show net collected
+$amountForThisReceipt = $activePayment ? max(0, floatval($activePayment['payment']) - floatval($activePayment['refunded_amount'] ?? 0)) : max(0, $totalCollected - $totalRefunded);
 $paymentMethodUsed = $activePayment ? ($activePayment['payment_method'] ?? $activePayment['paymentType']) : ($booking['paymentType'] ?? 'Cash');
 $txnReference = $activePayment ? ($activePayment['transaction_ref'] ?? '') : '';
 $receiptDate = $activePayment ? $activePayment['payment_date'] : ($booking['bookingdate'] ?? date('Y-m-d H:i:s'));
@@ -66,7 +68,7 @@ $planPrice = floatval($booking['price']);
 $regFee = floatval($booking['registration_fee'] ?? 0);
 $discount = floatval($booking['discount'] ?? 0);
 $netTotal = ($planPrice + $regFee) - $discount;
-$balanceDue = max(0, $netTotal - $totalCollected);
+$balanceDue = max(0, $netTotal - max(0, $totalCollected - $totalRefunded));
 
 $gymName = get_setting('gym_name', 'Golden Eagle');
 $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');

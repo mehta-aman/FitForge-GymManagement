@@ -45,45 +45,57 @@ $yt = get_setting('social_youtube');
 
 <!-- iOS Native Mobile Bottom Tab Bar -->
 <nav class="ios-mobile-tab-bar" aria-label="Mobile Bottom Navigation">
-  <a href="index.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
-    <i class="fa fa-home"></i>
-    <span>Home</span>
-  </a>
-  <a href="index.php#pricing" class="ios-tab-item">
-    <i class="fa fa-tags"></i>
-    <span>Plans</span>
-  </a>
-  <a href="about.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : ''; ?>">
-    <i class="fa fa-compass"></i>
-    <span>About</span>
-  </a>
-  <a href="contact.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
-    <i class="fa fa-envelope"></i>
-    <span>Contact</span>
-  </a>
   <?php if(!empty($_SESSION['uid'])): ?>
+    <a href="user-dashboard.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
+      <i class="fa fa-home"></i>
+      <span>Home</span>
+    </a>
+    <a href="Booking-History.php" class="ios-tab-item <?php echo in_array(basename($_SERVER['PHP_SELF']), ['Booking-History.php', 'booking-details.php']) ? 'active' : ''; ?>">
+      <i class="fa fa-calendar-check-o"></i>
+      <span>Bookings</span>
+    </a>
     <a href="scan.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? 'active' : ''; ?>" style="<?php echo basename($_SERVER['PHP_SELF']) == 'scan.php' ? '' : 'color: #38bdf8;'; ?>">
       <i class="fa fa-camera" style="font-size: 18px;"></i>
       <span>Scan QR</span>
     </a>
-    <a href="user-dashboard.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'user-dashboard.php' ? 'active' : ''; ?>">
-      <i class="fa fa-qrcode"></i>
-      <span>Pass</span>
+    <a href="lost-found.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'lost-found.php' ? 'active' : ''; ?>">
+      <i class="fa fa-search text-warning"></i>
+      <span>Lost &amp; Found</span>
     </a>
-    <a href="profile.php" class="ios-tab-item <?php echo in_array(basename($_SERVER['PHP_SELF']), ['profile.php', 'Booking-History.php', 'booking-details.php', 'changepassword.php']) ? 'active' : ''; ?>">
+    <a href="profile.php" class="ios-tab-item <?php echo in_array(basename($_SERVER['PHP_SELF']), ['profile.php', 'changepassword.php']) ? 'active' : ''; ?>">
       <i class="fa fa-user"></i>
-      <span>Account</span>
+      <span>Profile</span>
     </a>
   <?php elseif(!empty($_SESSION['adminid'])): ?>
     <a href="admin/index.php" class="ios-tab-item">
       <i class="fa fa-shield" style="color: #60a5fa;"></i>
       <span>Staff Hub</span>
     </a>
+    <a href="lost-found.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'lost-found.php' ? 'active' : ''; ?>">
+      <i class="fa fa-search text-warning"></i>
+      <span>Lost &amp; Found</span>
+    </a>
     <a href="admin/logout.php" class="ios-tab-item">
       <i class="fa fa-sign-out"></i>
       <span>Logout</span>
     </a>
   <?php else: ?>
+    <a href="index.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+      <i class="fa fa-home"></i>
+      <span>Home</span>
+    </a>
+    <a href="index.php#plans" class="ios-tab-item">
+      <i class="fa fa-tags"></i>
+      <span>Plans</span>
+    </a>
+    <a href="about.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : ''; ?>">
+      <i class="fa fa-compass"></i>
+      <span>About</span>
+    </a>
+    <a href="contact.php" class="ios-tab-item <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
+      <i class="fa fa-envelope"></i>
+      <span>Contact</span>
+    </a>
     <a href="login.php" class="ios-tab-item <?php echo in_array(basename($_SERVER['PHP_SELF']), ['login.php', 'registration.php']) ? 'active' : ''; ?>">
       <i class="fa fa-sign-in"></i>
       <span>Sign In</span>

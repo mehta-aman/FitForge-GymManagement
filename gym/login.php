@@ -30,8 +30,15 @@ if (!empty($_SESSION['uid'])) {
     exit();
 }
 if (!empty($_SESSION['adminid'])) {
-    header("location: admin/index.php");
+    $target = !empty($redirectParam) ? $redirectParam : 'admin/index.php';
+    header("location: " . $target);
     exit();
+}
+
+if (!empty($redirectParam) && empty($msg) && empty($successMsg)) {
+    if (str_starts_with($redirectParam, 'lost-found')) {
+        $msg = "🔒 Please sign in with your account to view the Lost & Found section.";
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -80,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $upd = $dbh->prepare("UPDATE tbladmin SET last_login = NOW() WHERE id = :id");
                             $upd->execute([':id' => $adminRow['id']]);
 
-                            header("location: admin/index.php");
+                            $target = !empty($redirectParam) ? $redirectParam : 'admin/index.php';
+                            header("location: " . $target);
                             exit();
                         }
                     } else {
@@ -175,7 +183,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $upd = $dbh->prepare("UPDATE tbladmin SET last_login = NOW() WHERE id = :id");
                                 $upd->execute([':id' => $adminRow['id']]);
 
-                                header("location: admin/index.php");
+                                $target = !empty($redirectParam) ? $redirectParam : 'admin/index.php';
+                                header("location: " . $target);
                                 exit();
                             }
                         } else {
@@ -210,12 +219,12 @@ $gymTitle = get_setting('gym_name', 'GYM MS');
 			max-width: 500px;
 			margin: 20px auto;
 			padding: 30px 26px;
-			background: linear-gradient(135deg, rgba(30, 41, 59, 0.78) 0%, rgba(15, 23, 42, 0.9) 100%);
-			backdrop-filter: blur(36px) saturate(200%);
-			-webkit-backdrop-filter: blur(36px) saturate(200%);
-			border: 1px solid rgba(255, 255, 255, 0.16);
-			border-radius: 28px;
-			box-shadow: 0 30px 65px -15px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+			background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(11, 15, 25, 0.92) 100%);
+			backdrop-filter: blur(28px);
+			-webkit-backdrop-filter: blur(28px);
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			border-radius: 24px;
+			box-shadow: 0 25px 50px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.08);
 			text-align: center;
 			position: relative;
 			overflow: hidden;

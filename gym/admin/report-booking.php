@@ -1,9 +1,6 @@
 <?php
 require_once 'include/config.php';
-if (empty($_SESSION['adminid'])) {
-    header('location:login.php');
-    exit();
-}
+require_owner(); // Option A: Restricted Manager Financial Access — Booking & Sales reports are Owner-Only
 
 $fdate = trim($_REQUEST['fdate'] ?? date('Y-m-01'));
 $todate = trim($_REQUEST['todate'] ?? date('Y-m-d'));

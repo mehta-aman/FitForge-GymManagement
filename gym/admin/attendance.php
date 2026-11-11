@@ -40,31 +40,21 @@ if (isset($_POST['action']) && $_POST['action'] === 'checkin') {
             if ($existing) {
                 $error = "Member " . htmlspecialchars($user['fname'] . ' ' . $user['lname']) . " is ALREADY checked in right now!";
             } else {
-                // Check membership status & dues for alert message
-                $memStmt = $dbh->prepare("SELECT status, expiry_date FROM tbl_memberships WHERE user_id = :uid ORDER BY id DESC LIMIT 1");
-                $memStmt->execute([':uid' => $userId]);
-                $mem = $memStmt->fetch(PDO::FETCH_ASSOC);
-
-                $dueStmt = $dbh->prepare("
-                    SELECT SUM(GREATEST(0, (CAST(p.Price AS DECIMAL(10,2)) + CAST(COALESCE(p.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(p.discount,0) AS DECIMAL(10,2))) - (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id))) as dues
-                    FROM tblbooking b
-                    JOIN tbladdpackage p ON b.package_id = p.id
-                    WHERE b.userid = :uid
-                ");
-                $dueStmt->execute([':uid' => $userId]);
-                $dueAmt = floatval($dueStmt->fetchColumn());
-
-                // Record Check-in
+                // Evaluate Centralized Access Eligibility (Approved Policy 1, 2, 3, 5)
                 $gymId = get_current_gym_id();
-                $insert = $dbh->prepare("INSERT INTO tbl_attendance (user_id, check_in_time, check_in_method, gym_id) VALUES (:uid, NOW(), :method, :gym_id)");
-                $insert->execute([':uid' => $userId, ':method' => $checkMethod, ':gym_id' => $gymId]);
+                $accessEval = evaluate_gym_access_eligibility($userId, $dbh, $gymId);
 
-                $msg = "Checked in " . htmlspecialchars($user['fname'] . ' ' . $user['lname']) . " successfully!";
-                if ($dueAmt > 0) {
-                    $msg .= " ⚠️ NOTE: Member has ₹" . number_format($dueAmt, 2) . " outstanding dues!";
-                }
-                if ($mem && $mem['status'] !== 'active') {
-                    $msg .= " ⚠️ Pass Status: " . strtoupper($mem['status']) . "!";
+                if (!$accessEval['eligible']) {
+                    $error = "Access Blocked for " . htmlspecialchars($user['fname'] . ' ' . $user['lname']) . ": " . htmlspecialchars($accessEval['reason']);
+                } else {
+                    // Record Check-in
+                    $insert = $dbh->prepare("INSERT INTO tbl_attendance (user_id, check_in_time, check_in_method, gym_id) VALUES (:uid, NOW(), :method, :gym_id)");
+                    $insert->execute([':uid' => $userId, ':method' => $checkMethod, ':gym_id' => $gymId]);
+
+                    $msg = "Checked in " . htmlspecialchars($user['fname'] . ' ' . $user['lname']) . " successfully!";
+                    if (!empty($accessEval['dues']) && $accessEval['dues'] > 0) {
+                        $msg .= " (⚠️ Outstanding Dues: " . format_currency($accessEval['dues']) . ")";
+                    }
                 }
             }
         }

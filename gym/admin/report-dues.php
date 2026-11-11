@@ -1,9 +1,6 @@
 <?php
 require_once 'include/config.php';
-if (empty($_SESSION['adminid'])) {
-    header('location:login.php');
-    exit();
-}
+require_owner(); // Option A: Restricted Manager Financial Access — Dues reports are Owner-Only
 
 $statusFilter = trim($_GET['status'] ?? 'all');
 $search = trim($_GET['search'] ?? '');
@@ -18,13 +15,13 @@ $where = [];
 $params = [];
 
 if ($statusFilter === 'unpaid') {
-    $where[] = "(SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) = 0";
+    $where[] = "(SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) = 0";
 } elseif ($statusFilter === 'partial') {
-    $where[] = "(SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) > 0 
-                AND (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) < (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2)))";
+    $where[] = "(SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) > 0 
+                AND (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) < (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2)))";
 } else {
     // All dues (unpaid or partial)
-    $where[] = "(SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) < (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2)))";
+    $where[] = "(SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) < (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2)))";
 }
 
 if (!empty($search)) {
@@ -42,10 +39,10 @@ $querySql = "SELECT t1.id as bookingid, t1.booking_date,
              CAST(COALESCE(t2.registration_fee, 0) AS DECIMAL(10,2)) as reg_fee,
              CAST(COALESCE(t2.discount, 0) AS DECIMAL(10,2)) as discount,
              (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2))) as total_fee,
-             (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) as paid_amount,
+             (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) as paid_amount,
              (SELECT MAX(p.payment_date) FROM tblpayment p WHERE p.bookingID = t1.id) as last_payment_date
              $baseSql $whereSql
-             ORDER BY ((CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2))) - (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id)) DESC";
+             ORDER BY ((CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2))) - (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id)) DESC";
 
 $stmt = $dbh->prepare($querySql);
 $stmt->execute($params);

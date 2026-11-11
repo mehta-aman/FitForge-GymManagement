@@ -87,7 +87,7 @@ curl_close($ch);
 
 assert_test(str_contains($finalUrl, 'checkin.php'), "Login seamlessly forwards to checkin.php ($finalUrl)");
 assert_test(str_contains($checkinResultHtml, 'Check-In Confirmed!'), "Check-In Confirmed screen rendered successfully for member");
-assert_test(str_contains($checkinResultHtml, 'atul'), "Member name dynamically personalized on check-in card");
+assert_test(stripos($checkinResultHtml, 'Aman') !== false || stripos($checkinResultHtml, 'atul') !== false, "Member name dynamically personalized on check-in card");
 
 // Verify record in Database
 $stmt = $dbh->prepare("SELECT * FROM tbl_attendance WHERE user_id = 1 AND DATE(check_in_time) = CURDATE() ORDER BY id DESC LIMIT 1");

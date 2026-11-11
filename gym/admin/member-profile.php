@@ -1,5 +1,7 @@
 <?php
 require_once 'include/config.php';
+require_once 'include/rbac.php';
+require_once '../include/lost_found_helper.php';
 if (empty($_SESSION['adminid'])) {
     header('location:login.php');
     exit();
@@ -66,29 +68,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         } else {
             $planPrice = floatval($plan['Price']);
             $paymentStatus = 'unpaid';
-            if ($paidAmount >= $planPrice) {
+            if ($paidAmount >= $planPrice && $planPrice > 0) {
                 $paymentStatus = 'paid';
             } elseif ($paidAmount > 0) {
                 $paymentStatus = 'partial';
             }
 
-            // Determine membership active state
+            // Check if member already has an active pass valid in the future (Early Renewal Rule - Approved Policy 2)
             $today = date('Y-m-d');
-            $status = ($expiryDate >= $today) ? 'active' : 'expired';
+            $curActive = find_current_membership($uid, $dbh);
+            $renewedFromId = null;
+
+            if ($curActive && $curActive['status'] === 'active' && $curActive['expiry_date'] >= $today) {
+                // Chain renewal start date after existing pass expires
+                $startDate = date('Y-m-d', strtotime('+1 day', strtotime($curActive['expiry_date'])));
+                $expiryDate = date('Y-m-d', strtotime("+$durationMonths months", strtotime($startDate)));
+                $status = 'scheduled';
+                $renewedFromId = intval($curActive['id']);
+                if (empty($memNotes)) {
+                    $memNotes = "Early renewal scheduled to activate on " . date('d M Y', strtotime($startDate)) . " following pass #" . $curActive['id'];
+                }
+            } else {
+                $status = ($expiryDate >= $today) ? 'active' : 'expired';
+            }
 
             // 1. Dual-insert into legacy tblbooking
             $legacyStmt = $dbh->prepare("INSERT INTO tblbooking (package_id, userid, payment, paymentType) VALUES (?, ?, ?, ?)");
             $legacyStmt->execute([$planId, $uid, $paidAmount, $paymentMethod]);
             $bookingId = $dbh->lastInsertId();
 
-            // 2. If payment made, record in tblpayment
-            if ($paidAmount > 0) {
-                $payStmt = $dbh->prepare("INSERT INTO tblpayment (bookingID, paymentType, payment) VALUES (?, ?, ?)");
-                $payStmt->execute([$bookingId, $paymentMethod, $paidAmount]);
-            }
-
-            // 3. Insert into tbl_memberships
-            $memStmt = $dbh->prepare("INSERT INTO tbl_memberships (user_id, plan_id, booking_id, start_date, expiry_date, status, payment_status, total_amount, paid_amount, payment_method, transaction_ref, admin_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            // 2. Insert into tbl_memberships
+            $adminId = intval($_SESSION['adminid'] ?? 1);
+            $memStmt = $dbh->prepare("INSERT INTO tbl_memberships (user_id, plan_id, booking_id, start_date, expiry_date, status, payment_status, total_amount, paid_amount, payment_method, transaction_ref, admin_notes, renewed_from_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $memStmt->execute([
                 $uid,
                 $planId,
@@ -101,42 +112,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $paidAmount,
                 $paymentMethod,
                 $txnRef,
-                $memNotes
+                $memNotes,
+                $renewedFromId
             ]);
+            $newMemId = $dbh->lastInsertId();
 
-            $msg = "Membership assigned successfully!";
+            // 3. If payment made, record in tblpayment with exact membership_id and recorded_by_admin_id
+            if ($paidAmount > 0) {
+                $payStmt = $dbh->prepare("INSERT INTO tblpayment (bookingID, membership_id, paymentType, payment, payment_method, transaction_ref, notes, recorded_by_admin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $payStmt->execute([$bookingId, $newMemId, $paymentMethod, $paidAmount, $paymentMethod, $txnRef, $memNotes, $adminId]);
+            }
+
+            if ($status === 'scheduled') {
+                $msg = "Early renewal created! Membership pass scheduled to activate on " . date('d M Y', strtotime($startDate)) . " (Status: Scheduled).";
+            } else {
+                $msg = "Membership assigned successfully!";
+            }
         }
     }
 }
 
-// Handle Freeze Membership
+// Handle Freeze Membership (Approved Policy 3)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'freeze_membership') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $err = "Security token mismatch. Please try again.";
+    } elseif (!has_permission('manage_freezes')) {
+        $err = "You do not have administrative permission to freeze memberships.";
     } else {
         $memId = intval($_POST['membership_id'] ?? 0);
         $fStart = trim($_POST['freeze_start_date'] ?? date('Y-m-d'));
         $fEnd = trim($_POST['freeze_end_date'] ?? '');
         $fReason = trim($_POST['freeze_reason'] ?? 'Temporary Personal Suspension');
-        
+        $adminId = intval($_SESSION['adminid'] ?? 1);
+
+        // 1. Audit in tbl_membership_freezes
+        $freezeAuditStmt = $dbh->prepare("INSERT INTO tbl_membership_freezes (membership_id, user_id, freeze_start_date, freeze_end_date, reason, approved_by_admin_id) VALUES (?, ?, ?, ?, ?, ?)");
+        $freezeAuditStmt->execute([$memId, $uid, $fStart, $fEnd ?: NULL, $fReason, $adminId]);
+
+        // 2. Update membership record
         $freezeStmt = $dbh->prepare("UPDATE tbl_memberships SET status = 'frozen', freeze_start_date = ?, freeze_end_date = ?, freeze_reason = ?, admin_notes = CONCAT(COALESCE(admin_notes, ''), '\n[Frozen on " . date('Y-m-d') . ": $fReason]') WHERE id = ? AND user_id = ?");
         $freezeStmt->execute([$fStart, $fEnd ?: NULL, $fReason, $memId, $uid]);
         $msg = "Membership has been frozen/suspended.";
     }
 }
 
-// Handle Resume Membership (Auto-extends expiry by suspended duration)
+// Handle Resume Membership (Approved Policy 3 - Exact Day Extension & Audit)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'resume_membership') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $err = "Security token mismatch. Please try again.";
+    } elseif (!has_permission('manage_freezes')) {
+        $err = "You do not have administrative permission to resume memberships.";
     } else {
         $memId = intval($_POST['membership_id'] ?? 0);
+        $adminId = intval($_SESSION['adminid'] ?? 1);
         $curMem = $dbh->query("SELECT * FROM tbl_memberships WHERE id = $memId AND user_id = $uid")->fetch(PDO::FETCH_ASSOC);
         if ($curMem && $curMem['status'] === 'frozen') {
             $fStart = !empty($curMem['freeze_start_date']) ? strtotime($curMem['freeze_start_date']) : time();
             $frozenDays = max(1, ceil((time() - $fStart) / 86400));
             $newExpiry = date('Y-m-d', strtotime("+$frozenDays days", strtotime($curMem['expiry_date'])));
             
+            // 1. Update audit record in tbl_membership_freezes
+            $updFreezeAudit = $dbh->prepare("UPDATE tbl_membership_freezes SET approved_days = ?, resumed_at = NOW(), resumed_by_admin_id = ? WHERE membership_id = ? AND resumed_at IS NULL ORDER BY id DESC LIMIT 1");
+            $updFreezeAudit->execute([$frozenDays, $adminId, $memId]);
+
+            // 2. Extend expiry date and reactivate membership
             $resumeStmt = $dbh->prepare("UPDATE tbl_memberships SET status = 'active', expiry_date = ?, freeze_start_date = NULL, freeze_end_date = NULL, freeze_reason = NULL, admin_notes = CONCAT(COALESCE(admin_notes, ''), '\n[Resumed on " . date('Y-m-d') . ". Extended by $frozenDays days to $newExpiry]') WHERE id = ? AND user_id = ?");
             $resumeStmt->execute([$newExpiry, $memId, $uid]);
             $msg = "Membership resumed successfully! Expiration date extended by $frozenDays days to " . date('d M Y', strtotime($newExpiry)) . ".";
@@ -203,19 +242,30 @@ $memHistoryStmt = $dbh->prepare("SELECT m.*, p.titlename, p.PackageDuratiobn, c.
 $memHistoryStmt->execute([$uid]);
 $membershipHistory = $memHistoryStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Find current active or frozen membership (if any)
-$currentMembership = null;
-foreach ($membershipHistory as $mem) {
-    if (in_array($mem['status'], ['active', 'frozen']) && ($mem['expiry_date'] >= date('Y-m-d') || $mem['status'] === 'frozen')) {
-        $currentMembership = $mem;
-        break;
-    }
-}
+// Find current active/frozen pass (Strictly ignores future scheduled passes)
+$currentMembership = find_current_membership($uid, $dbh);
+$scheduledMembership = find_scheduled_membership($uid, $dbh);
+
+// Fetch freeze audit history for this member
+$freezeHistoryStmt = $dbh->prepare("
+    SELECT f.*, adm.name as approver_name
+    FROM tbl_membership_freezes f
+    LEFT JOIN tbladmin adm ON f.approved_by_admin_id = adm.id
+    WHERE f.user_id = ?
+    ORDER BY f.id DESC
+");
+$freezeHistoryStmt->execute([$uid]);
+$freezeHistory = $freezeHistoryStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch payment ledger for this member
-$payStmt = $dbh->prepare("SELECT p.id as pay_id, p.bookingID, p.paymentType, p.payment, p.payment_date, b.package_id, pkg.titlename FROM tblpayment p JOIN tblbooking b ON p.bookingID = b.id LEFT JOIN tbladdpackage pkg ON b.package_id = pkg.id WHERE b.userid = ? ORDER BY p.payment_date DESC");
+$payStmt = $dbh->prepare("SELECT p.id as pay_id, p.bookingID, p.membership_id, p.paymentType, p.payment, p.refunded_amount, p.status as pay_status, p.payment_date, b.package_id, pkg.titlename FROM tblpayment p JOIN tblbooking b ON p.bookingID = b.id LEFT JOIN tbladdpackage pkg ON b.package_id = pkg.id WHERE b.userid = ? ORDER BY p.payment_date DESC, p.id DESC");
 $payStmt->execute([$uid]);
 $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch lost and found items for this member
+$lfStmt = $dbh->prepare("SELECT * FROM tbl_lost_found WHERE author_type = 'user' AND author_id = ? ORDER BY created_at DESC");
+$lfStmt->execute([$uid]);
+$memberLostFound = $lfStmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -340,14 +390,14 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
                 <span class="ios-badge ios-badge-info" style="margin-bottom: 8px;">CURRENT MEMBERSHIP</span>
               <?php endif; ?>
               <h2 style="font-size: 24px; font-weight: 800; margin: 4px 0;">
-                <?php echo $currentMembership ? htmlspecialchars($currentMembership['titlename']) : 'No Active Membership'; ?>
+                <?php echo $currentMembership ? htmlspecialchars($currentMembership['titlename'] ?? $currentMembership['plan_name'] ?? 'Active Membership') : 'No Active Membership'; ?>
               </h2>
               <?php if ($currentMembership): ?>
                 <p style="color: var(--text-secondary); margin: 0; font-size: 13.5px;">
                   Category: <strong><?php echo htmlspecialchars($currentMembership['category_name'] ?? 'General'); ?></strong> &bull;
                   Period: <?php echo date('d M Y', strtotime($currentMembership['start_date'])); ?> &rarr; <?php echo date('d M Y', strtotime($currentMembership['expiry_date'])); ?>
                   <?php if (!empty($currentMembership['freeze_reason'])): ?>
-                    <br><small style="color: #fbbf24;"><i class="fa fa-info-circle"></i> Freeze Reason: <?php echo htmlspecialchars($currentMembership['freeze_reason']); ?> (Frozen since <?php echo date('d M Y', strtotime($currentMembership['freeze_start_date'])); ?>)</small>
+                    <br><small style="color: #fbbf24;"><i class="fa fa-info-circle"></i> Freeze Reason: <?php echo htmlspecialchars($currentMembership['freeze_reason'] ?? ''); ?> (Frozen since <?php echo date('d M Y', strtotime($currentMembership['freeze_start_date'])); ?>)</small>
                   <?php endif; ?>
                 </p>
               <?php else: ?>
@@ -416,6 +466,65 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
               </div>
             </div>
           <?php endif; ?>
+
+          <?php if (!empty($scheduledMembership)): 
+            $daysUntil = max(0, (int)ceil((strtotime($scheduledMembership['start_date']) - time()) / 86400));
+          ?>
+            <div style="margin-top: 18px; padding: 14px 18px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <span class="ios-badge ios-badge-info" style="font-size: 11px; margin-bottom: 4px;"><i class="fa fa-calendar"></i> UPCOMING SCHEDULED RENEWAL</span>
+                <div style="font-size: 16px; font-weight: 700; color: #fff;">
+                  <?php echo htmlspecialchars($scheduledMembership['plan_name'] ?? 'Membership Plan'); ?>
+                </div>
+                <div style="font-size: 12.5px; color: #94a3b8;">
+                  Scheduled Period: <strong><?php echo date('d M Y', strtotime($scheduledMembership['start_date'])); ?></strong> &rarr; <strong><?php echo date('d M Y', strtotime($scheduledMembership['expiry_date'])); ?></strong>
+                  (Activates automatically in <?php echo $daysUntil; ?> days)
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <span class="ios-badge <?php echo ($scheduledMembership['payment_status'] === 'paid') ? 'ios-badge-success' : 'ios-badge-warning'; ?>">
+                  <?php echo ucfirst($scheduledMembership['payment_status']); ?> (<?php echo format_currency($scheduledMembership['paid_amount']); ?>)
+                </span>
+                <?php if (!empty($scheduledMembership['booking_id'])): ?>
+                  <div style="margin-top: 5px;">
+                    <a href="booking-history-details.php?bookingid=<?php echo $scheduledMembership['booking_id']; ?>" class="btn btn-sm btn-outline-light" style="font-size: 11.5px; padding: 2px 8px; border-radius: 6px;">Ledger</a>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+
+          <?php if (!empty($freezeHistory)): ?>
+            <div style="margin-top: 18px; padding: 14px 18px; background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 14px;">
+              <h5 style="font-size: 14px; font-weight: 700; color: #fbbf24; margin-bottom: 10px;">
+                <i class="fa fa-history"></i> Freeze &amp; Suspension History
+              </h5>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover" style="margin: 0; font-size: 12px;">
+                  <thead>
+                    <tr>
+                      <th>Freeze Start</th>
+                      <th>Resumed On</th>
+                      <th>Days Extended</th>
+                      <th>Reason</th>
+                      <th>Authorized By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($freezeHistory as $fh): ?>
+                    <tr>
+                      <td><?php echo date('d M Y', strtotime($fh['freeze_start_date'])); ?></td>
+                      <td><?php echo !empty($fh['resumed_at']) ? date('d M Y', strtotime($fh['resumed_at'])) : '<span class="badge badge-warning">Currently Active</span>'; ?></td>
+                      <td style="font-weight: 700; color: #34d399;">+<?php echo intval($fh['approved_days']); ?> days</td>
+                      <td style="color: #cbd5e1;"><?php echo htmlspecialchars($fh['reason'] ?? 'Personal request'); ?></td>
+                      <td style="color: #94a3b8;"><?php echo htmlspecialchars($fh['approver_name'] ?? 'Admin'); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          <?php endif; ?>
         </div>
 
         <!-- Membership History Table -->
@@ -463,7 +572,57 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
           </div>
         </div>
 
-        <!-- Financial & Payment History Table -->
+        <!-- Lost & Found Activity Card (All Roles) -->
+        <div class="tile">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 18px; font-weight: 700; margin: 0;">
+              <i class="fa fa-archive" style="color: #38bdf8; margin-right: 6px;"></i> Lost &amp; Found Activity
+            </h3>
+            <a href="lost-found.php" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 12px; font-weight: 600;">
+              <i class="fa fa-search"></i> Lost &amp; Found Desk
+            </a>
+          </div>
+          <?php if (!empty($memberLostFound)): ?>
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered" style="margin: 0; font-size: 12.5px;">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Item Title</th>
+                    <th>Category</th>
+                    <th>Location in Gym</th>
+                    <th>Date Reported</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($memberLostFound as $mlf): ?>
+                    <tr>
+                      <td>
+                        <span class="badge <?php echo $mlf['item_type'] === 'lost' ? 'badge-danger' : 'badge-success'; ?>" style="font-size: 10px; text-transform: uppercase;">
+                          <?php echo $mlf['item_type']; ?>
+                        </span>
+                      </td>
+                      <td><strong><?php echo htmlspecialchars($mlf['title']); ?></strong></td>
+                      <td><?php echo get_category_badge($mlf['category']); ?></td>
+                      <td style="color: #cbd5e1;"><?php echo htmlspecialchars($mlf['location_in_gym']); ?></td>
+                      <td style="color: #94a3b8;"><?php echo date('d M Y', strtotime($mlf['date_reported'])); ?></td>
+                      <td><?php echo get_item_status_badge($mlf['status'], $mlf['item_type']); ?></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          <?php else: ?>
+            <div style="text-align: center; color: #94a3b8; padding: 24px;">
+              <i class="fa fa-archive fa-2x mb-2 d-block" style="opacity: 0.35;"></i>
+              No lost or found items reported by this member.
+            </div>
+          <?php endif; ?>
+        </div>
+
+        <!-- Financial & Payment History Table (Option A: Strictly Owner Only) -->
+        <?php if (is_owner()): ?>
         <div class="tile">
           <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
             <i class="fa fa-credit-card" style="color: #10b981; margin-right: 6px;"></i> Payment Ledger
@@ -476,7 +635,7 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
                   <th>Plan</th>
                   <th>Payment Method</th>
                   <th>Amount Paid</th>
-                  <th>Date & Time</th>
+                  <th>Date &amp; Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -495,6 +654,7 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
             </table>
           </div>
         </div>
+        <?php endif; ?>
       </div>
     </div>
   </main>
@@ -700,7 +860,7 @@ $paymentRecords = $payStmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="modal-body" style="padding: 24px;">
               <div class="form-group">
                 <label style="font-weight: 600; font-size: 13px;">Current Plan</label>
-                <input type="text" class="form-control" readonly value="<?php echo htmlspecialchars($currentMembership['titlename']); ?> (<?php echo format_currency($currentMembership['total_amount']); ?>)" style="border-radius: 12px; opacity: 0.7;">
+                <input type="text" class="form-control" readonly value="<?php echo htmlspecialchars($currentMembership['titlename'] ?? $currentMembership['plan_name'] ?? 'Active Plan'); ?> (<?php echo format_currency($currentMembership['total_amount']); ?>)" style="border-radius: 12px; opacity: 0.7;">
               </div>
 
               <div class="form-group">

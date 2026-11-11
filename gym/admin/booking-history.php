@@ -1,6 +1,6 @@
 <?php
 require_once 'include/config.php';
-require_role(['owner', 'manager']);
+require_owner(); // Option A: Restricted Manager Financial Access — Booking ledger is Owner-Only
 
 $typeFilter = trim($_GET['type'] ?? 'all');
 $search = trim($_GET['search'] ?? '');
@@ -19,11 +19,11 @@ $where = [];
 $params = [];
 
 if ($typeFilter === 'new') {
-    $where[] = "(t1.paymentType IS NULL OR t1.paymentType = '' OR t1.paymentType = '0' OR (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) = 0)";
+    $where[] = "(t1.paymentType IS NULL OR t1.paymentType = '' OR t1.paymentType = '0' OR (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) = 0)";
 } elseif ($typeFilter === 'partial') {
-    $where[] = "(SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) > 0 AND (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) < CAST(t2.Price AS DECIMAL(10,2))";
+    $where[] = "(SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) > 0 AND (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) < CAST(t2.Price AS DECIMAL(10,2))";
 } elseif ($typeFilter === 'full') {
-    $where[] = "(SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) >= CAST(t2.Price AS DECIMAL(10,2))";
+    $where[] = "(SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) >= CAST(t2.Price AS DECIMAL(10,2))";
 }
 
 if ($search !== '') {
@@ -45,7 +45,7 @@ $selectSql = "SELECT t1.id as bookingid, t1.booking_date as bookingdate, t1.paym
               t3.id as userid, t3.fname, t3.lname, t3.email, t3.mobile,
               t2.titlename as title, t2.PackageDuratiobn, t2.Price as price,
               t4.category_name, t5.PackageName,
-              (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id) as total_paid
+              (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id) as total_paid
               $sqlBase $whereSql ORDER BY t1.id DESC LIMIT $limit OFFSET $offset";
 
 $query = $dbh->prepare($selectSql);
@@ -54,9 +54,9 @@ $bookings = $query->fetchAll(PDO::FETCH_ASSOC);
 
 // Counts for tabs
 $totalAll = $dbh->query("SELECT count(*) FROM tblbooking")->fetchColumn();
-$totalNew = $dbh->query("SELECT count(*) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) = 0")->fetchColumn();
-$totalPartial = $dbh->query("SELECT count(*) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) > 0 AND (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) < CAST(p.Price AS DECIMAL(10,2))")->fetchColumn();
-$totalFull = $dbh->query("SELECT count(*) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) >= CAST(p.Price AS DECIMAL(10,2))")->fetchColumn();
+$totalNew = $dbh->query("SELECT count(*) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(CAST(pay.payment AS DECIMAL(10,2)) - CAST(COALESCE(pay.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) = 0")->fetchColumn();
+$totalPartial = $dbh->query("SELECT count(*) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(CAST(pay.payment AS DECIMAL(10,2)) - CAST(COALESCE(pay.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) > 0 AND (SELECT COALESCE(SUM(CAST(pay.payment AS DECIMAL(10,2)) - CAST(COALESCE(pay.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) < CAST(p.Price AS DECIMAL(10,2))")->fetchColumn();
+$totalFull = $dbh->query("SELECT count(*) FROM tblbooking b JOIN tbladdpackage p ON b.package_id = p.id WHERE (SELECT COALESCE(SUM(CAST(pay.payment AS DECIMAL(10,2)) - CAST(COALESCE(pay.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment pay WHERE pay.bookingID = b.id) >= CAST(p.Price AS DECIMAL(10,2))")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">

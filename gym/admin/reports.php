@@ -1,20 +1,40 @@
 <?php
 require_once 'include/config.php';
-require_role(['owner', 'manager']);
+require_owner(); // Option A: Restricted Manager Financial Access — Financial reports are Owner-Only
 
-// 1. KPI Calculations
-$totalRevenue = floatval($dbh->query("SELECT COALESCE(SUM(payment), 0) FROM tblpayment")->fetchColumn());
-$totalMembers = intval($dbh->query("SELECT COUNT(*) FROM tbluser")->fetchColumn());
-$activeMemberships = intval($dbh->query("SELECT COUNT(*) FROM tbl_memberships WHERE status = 'active' AND expiry_date >= CURDATE()")->fetchColumn());
-$expiringSoon = intval($dbh->query("SELECT COUNT(*) FROM tbl_memberships WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 14 DAY)")->fetchColumn());
+// 1. Financial & Operational KPI Calculations
+$gymId = get_current_gym_id();
+$grossRevenue = floatval($dbh->query("SELECT COALESCE(SUM(payment), 0) FROM tblpayment WHERE gym_id = $gymId")->fetchColumn());
+$totalRefunds = floatval($dbh->query("SELECT COALESCE(SUM(refund_amount), 0) FROM tbl_refund_requests WHERE status = 'executed' AND gym_id = $gymId")->fetchColumn());
+$totalRevenue = max(0, $grossRevenue - $totalRefunds);
 
-// Calculate outstanding dues across bookings
+$todayCollections = floatval($dbh->query("SELECT COALESCE(SUM(payment), 0) FROM tblpayment WHERE DATE(payment_date) = CURDATE() AND gym_id = $gymId")->fetchColumn());
+$currMonthCollections = floatval($dbh->query("SELECT COALESCE(SUM(payment), 0) FROM tblpayment WHERE MONTH(payment_date) = MONTH(CURDATE()) AND YEAR(payment_date) = YEAR(CURDATE()) AND gym_id = $gymId")->fetchColumn());
+
+$totalMembers = intval($dbh->query("SELECT COUNT(*) FROM tbluser WHERE gym_id = $gymId")->fetchColumn());
+$activeMemberships = intval($dbh->query("SELECT COUNT(*) FROM tbl_memberships WHERE status = 'active' AND expiry_date >= CURDATE() AND start_date <= CURDATE() AND gym_id = $gymId")->fetchColumn());
+$scheduledMemberships = intval($dbh->query("SELECT COUNT(*) FROM tbl_memberships WHERE (status = 'scheduled' OR (status = 'active' AND start_date > CURDATE())) AND gym_id = $gymId")->fetchColumn());
+$expiringSoon = intval($dbh->query("SELECT COUNT(*) FROM tbl_memberships WHERE status = 'active' AND expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND gym_id = $gymId")->fetchColumn());
+
+// Calculate outstanding dues across bookings (accounting for refunded deductions)
 $dueQuery = "SELECT SUM(
-    GREATEST(0, (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2))) - (SELECT COALESCE(SUM(p.payment), 0) FROM tblpayment p WHERE p.bookingID = t1.id))
+    GREATEST(0, (CAST(t2.Price AS DECIMAL(10,2)) + CAST(COALESCE(t2.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(t2.discount,0) AS DECIMAL(10,2))) - (SELECT COALESCE(SUM(CAST(p.payment AS DECIMAL(10,2)) - CAST(COALESCE(p.refunded_amount,0) AS DECIMAL(10,2))), 0) FROM tblpayment p WHERE p.bookingID = t1.id))
 ) as total_dues
 FROM tblbooking t1
-JOIN tbladdpackage t2 ON t1.package_id = t2.id";
+JOIN tbladdpackage t2 ON t1.package_id = t2.id
+WHERE t1.gym_id = $gymId";
 $totalDues = floatval($dbh->query($dueQuery)->fetchColumn());
+
+// Payment Method Breakdown
+$methodBreakdown = $dbh->query("
+    SELECT COALESCE(payment_method, paymentType, 'Cash') as method_name,
+           COUNT(*) as txn_count,
+           SUM(CAST(payment AS DECIMAL(10,2)) - CAST(COALESCE(refunded_amount,0) AS DECIMAL(10,2))) as method_net
+    FROM tblpayment
+    WHERE gym_id = $gymId
+    GROUP BY method_name
+    ORDER BY method_net DESC
+")->fetchAll(PDO::FETCH_ASSOC);
 
 // 2. Recent Payments with Receipt link
 $recentPayments = $dbh->query("
@@ -23,12 +43,13 @@ $recentPayments = $dbh->query("
     JOIN tblbooking b ON p.bookingID = b.id
     JOIN tbluser u ON b.userid = u.id
     JOIN tbladdpackage pkg ON b.package_id = pkg.id
+    WHERE p.gym_id = $gymId
     ORDER BY p.id DESC
     LIMIT 6
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // 3. Current Month Registrations
-$currMonthSignups = intval($dbh->query("SELECT COUNT(*) FROM tbluser WHERE MONTH(create_date) = MONTH(CURDATE()) AND YEAR(create_date) = YEAR(CURDATE())")->fetchColumn());
+$currMonthSignups = intval($dbh->query("SELECT COUNT(*) FROM tbluser WHERE MONTH(create_date) = MONTH(CURDATE()) AND YEAR(create_date) = YEAR(CURDATE()) AND gym_id = $gymId")->fetchColumn());
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -299,6 +320,32 @@ $currMonthSignups = intval($dbh->query("SELECT COUNT(*) FROM tbluser WHERE MONTH
         </div>
       </div>
     </div>
+
+    <!-- Payment Method Distribution & Liquidity Breakdown -->
+    <?php if (!empty($methodBreakdown)): ?>
+      <div class="tile">
+        <h3 style="font-size: 18px; font-weight: 700; margin: 0 0 16px 0; color: #fff;">
+          <i class="fa fa-pie-chart" style="color: var(--color-accent); margin-right: 6px;"></i> Payment Method Distribution &amp; Collections
+        </h3>
+        <div class="row" style="row-gap: 14px;">
+          <?php foreach ($methodBreakdown as $mb): ?>
+            <div class="col-sm-6 col-md-4 col-lg">
+              <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); border-radius: 14px; padding: 14px;">
+                <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">
+                  <?php echo htmlspecialchars($mb['method_name']); ?>
+                </div>
+                <div style="font-size: 20px; font-weight: 800; color: #34d399; margin-top: 4px;">
+                  <?php echo format_currency($mb['method_net']); ?>
+                </div>
+                <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+                  <?php echo intval($mb['txn_count']); ?> transaction(s)
+                </div>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <!-- Recent Payments & Receipts Ledger Strip -->
     <div class="tile">

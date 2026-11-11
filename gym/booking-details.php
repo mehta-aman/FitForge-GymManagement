@@ -42,9 +42,10 @@ if(strlen($_SESSION["uid"]) == 0) {
 			JOIN tbluser as t3 ON t1.userid = t3.id
 			JOIN tblcategory as t4 ON t2.category = t4.id
 			JOIN tblpackage as t5 ON t2.PackageType = t5.id
-			WHERE t1.id = :bookindid";
+			WHERE t1.id = :bookindid AND t1.userid = :uid";
 			$query = $dbh->prepare($sql);
-			$query->bindParam(':bookindid', $bookindid, PDO::PARAM_STR);
+			$query->bindParam(':bookindid', $bookindid, PDO::PARAM_INT);
+			$query->bindParam(':uid', $uid, PDO::PARAM_INT);
 			$query->execute();
 			$results = $query->fetchAll(PDO::FETCH_OBJ);
 			if($query->rowCount() > 0) {
@@ -108,7 +109,7 @@ if(strlen($_SESSION["uid"]) == 0) {
 				</div>
 				<?php endif; ?>
 			</div>
-			<?php } } ?>
+			<?php } ?>
 
 			<!-- Payment Ledger Card -->
 			<?php 
@@ -168,6 +169,13 @@ if(strlen($_SESSION["uid"]) == 0) {
 				</div>
 				<?php endif; ?>
 			</div>
+			<?php } else { ?>
+			<div class="ios-glass" style="padding: 40px; text-align: center; margin-bottom: 30px;">
+				<i class="fa fa-shield" style="font-size: 42px; color: #ef4444; margin-bottom: 12px; display: block;"></i>
+				<h3 style="color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 8px;">Access Restricted</h3>
+				<p style="color: var(--text-secondary); margin-bottom: 0;">Booking receipt not found or access restricted to your account.</p>
+			</div>
+			<?php } ?>
 		</div>
 
 		<?php include 'include/footer.php'; ?>

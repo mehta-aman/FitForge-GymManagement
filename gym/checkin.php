@@ -40,7 +40,7 @@ if (!$tokenValid) {
     <body>
         <?php include 'include/header.php'; ?>
         <div class="site-content-wrapper" style="padding: 40px 16px; flex: 1; display: flex; align-items: center; justify-content: center;">
-            <div class="ios-card" style="max-width: 440px; width: 100%; text-align: center; padding: 36px 24px; border-radius: 28px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(239, 68, 68, 0.3); box-shadow: 0 25px 50px rgba(0,0,0,0.5);">
+            <div class="ios-card" style="max-width: 440px; width: 100%; text-align: center; padding: 36px 24px; border-radius: 20px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(24px); border: 1px solid rgba(239, 68, 68, 0.3); box-shadow: 0 10px 25px rgba(0,0,0,0.45);">
                 <div style="width: 76px; height: 76px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 20px;">
                     <i class="fa fa-exclamation-triangle"></i>
                 </div>
@@ -104,27 +104,23 @@ if (!$user || $user['status'] === 'inactive') {
     exit();
 }
 
-// 2. Fetch Latest Membership Pass
-$memStmt = $dbh->prepare("
-    SELECT m.*, p.titlename as plan_name, p.PackageDuratiobn, p.Price,
-           DATEDIFF(m.expiry_date, CURDATE()) as days_left
-    FROM tbl_memberships m
-    LEFT JOIN tbladdpackage p ON m.plan_id = p.id
-    WHERE m.user_id = :uid
-    ORDER BY m.id DESC LIMIT 1
-");
-$memStmt->execute([':uid' => $userId]);
-$membership = $memStmt->fetch(PDO::FETCH_ASSOC);
+// 2. Fetch Current Membership Pass
+$membership = find_current_membership($userId, $dbh, $gymId);
+if (!$membership) {
+    $membership = find_scheduled_membership($userId, $dbh, $gymId);
+}
 
 // 3. Fetch Outstanding Dues
-$dueStmt = $dbh->prepare("
-    SELECT SUM(GREATEST(0, (CAST(p.Price AS DECIMAL(10,2)) + CAST(COALESCE(p.registration_fee,0) AS DECIMAL(10,2)) - CAST(COALESCE(p.discount,0) AS DECIMAL(10,2))) - (SELECT COALESCE(SUM(pay.payment), 0) FROM tblpayment pay WHERE pay.bookingID = b.id))) as dues
-    FROM tblbooking b
-    JOIN tbladdpackage p ON b.package_id = p.id
-    WHERE b.userid = :uid
-");
-$dueStmt->execute([':uid' => $userId]);
-$dues = floatval($dueStmt->fetchColumn());
+$dues = 0.0;
+if ($membership) {
+    $netPayable = calculate_net_payable(
+        floatval($membership['Price'] ?? $membership['total_amount']),
+        floatval($membership['registration_fee'] ?? 0),
+        floatval($membership['discount'] ?? 0)
+    );
+    $netPaid = get_membership_net_paid(intval($membership['id']), $dbh);
+    $dues = max(0.0, $netPayable - $netPaid);
+}
 
 // 4. Handle Checkout Action (POST)
 $justCheckedOut = false;
@@ -146,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// 5. Check Today's Attendance
+// 5. Check Today's Attendance & Evaluate Eligibility
 $attStmt = $dbh->prepare("
     SELECT id, check_in_time, check_out_time, check_in_method, notes
     FROM tbl_attendance
@@ -166,6 +162,39 @@ if (!$justCheckedOut) {
         $isAlreadyCheckedIn = true;
         $currentAttRecord = $existing;
     } else {
+        // Evaluate Access Eligibility (Approved Policy 1, 2, 3, 5)
+        $accessEval = evaluate_gym_access_eligibility($userId, $dbh, $gymId);
+        if (!$accessEval['eligible']) {
+            $rejectionReason = $accessEval['reason'];
+            ?>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>Access Restricted — GYM MS</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="stylesheet" href="css/bootstrap.min.css"/>
+                <link rel="stylesheet" href="css/font-awesome.min.css"/>
+                <link rel="stylesheet" href="css/ios-glass.css"/>
+            </head>
+            <body style="background: #09090b; color: #fff; padding: 50px 20px; text-align: center;">
+                <div class="ios-card" style="max-width: 440px; margin: 0 auto; padding: 30px;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px;">
+                        <i class="fa fa-lock"></i>
+                    </div>
+                    <h3 style="color: #ef4444; font-weight: 800; margin-bottom: 8px;">Access Restricted</h3>
+                    <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 24px;"><?php echo htmlspecialchars($rejectionReason); ?></p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <a href="user-dashboard.php" class="ios-btn ios-btn-primary" style="padding: 10px 18px; border-radius: 12px; text-decoration: none;">Dashboard</a>
+                        <a href="index.php" class="ios-btn ios-btn-secondary" style="padding: 10px 18px; border-radius: 12px; text-decoration: none;">Home</a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            <?php
+            exit();
+        }
+
         // Record brand new check-in
         $insert = $dbh->prepare("
             INSERT INTO tbl_attendance (user_id, check_in_time, check_out_time, check_in_method, notes, gym_id)
@@ -218,13 +247,13 @@ $gymTagline = get_setting('gym_tagline', 'FITNESS CLUB');
             margin: 0 auto;
         }
         .checkin-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 28px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(11, 15, 25, 0.95) 100%);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 22px;
             padding: 32px 24px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
             position: relative;
             overflow: hidden;
             text-align: center;

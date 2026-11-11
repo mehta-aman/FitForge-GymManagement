@@ -39,18 +39,35 @@ try {
 // Load Core Services from parent include
 require_once __DIR__ . '/../../include/security.php';
 require_once __DIR__ . '/../../include/settings.php';
+require_once __DIR__ . '/../../include/membership_engine.php';
 require_once __DIR__ . '/rbac.php';
 
 // Initialize hardened session
 init_secure_session();
 
+// Real-time Employee Status Enforcement (Immediate Deactivation Gate)
+if (!empty($_SESSION['adminid'])) {
+    $chkAdmin = $dbh->prepare("SELECT status, role FROM tbladmin WHERE id = ? LIMIT 1");
+    $chkAdmin->execute([$_SESSION['adminid']]);
+    $adminRow = $chkAdmin->fetch(PDO::FETCH_ASSOC);
+    if (!$adminRow || $adminRow['status'] !== 'approved') {
+        session_unset();
+        session_destroy();
+        header('location:login.php?error=deactivated');
+        exit();
+    }
+    $_SESSION['admin_role'] = $adminRow['role'];
+}
+
 // Preload settings into cache
 load_all_settings($dbh);
 
 // Tenant Context Helper (Foundational Multi-Gym Readiness)
-function get_current_gym_id() {
-    if (!empty($_SESSION['gym_id'])) {
-        return intval($_SESSION['gym_id']);
+if (!function_exists('get_current_gym_id')) {
+    function get_current_gym_id() {
+        if (!empty($_SESSION['gym_id'])) {
+            return intval($_SESSION['gym_id']);
+        }
+        return 1; // Default tenant organization
     }
-    return 1; // Default tenant organization
 }
